@@ -1759,6 +1759,10 @@ img {
   font-size: var(--font-size-sm);
 }
 
+.footer-main .footer-rights {
+  color: rgb(255,255,255) !important;
+}
+
 /* ─── 24. PÁGINA DE INICIO — SECCIONES ─── */
 .section-title {
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
