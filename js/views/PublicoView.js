@@ -1116,26 +1116,8 @@ const PublicoView = {
                 ${descripcion}
               </p>`
             : ''}
-          ${this._buildBotonCalendario(evento)}
         </article>
       </div>
-    `;
-  },
-
-  /**
-   * Construye el enlace para anadir el evento a Google Calendar.
-   * @private
-   */
-  _buildBotonCalendario(evento) {
-    const googleUrl = this._buildGoogleCalendarUrl(evento);
-    return `
-      <a class="evento-cal-link"
-         href="${this._esc(googleUrl)}"
-         target="_blank"
-         rel="noopener noreferrer"
-         aria-label="${i18n.eventos.anadirCalendario}">
-        <i class="bi bi-google" aria-hidden="true"></i>${i18n.eventos.anadirCalendario}
-      </a>
     `;
   },
 
@@ -1164,46 +1146,6 @@ const PublicoView = {
       minute:   '2-digit',
       timeZone: EVENTOS_TIME_ZONE,
     });
-  },
-
-  /**
-   * Formatea una fecha para Google Calendar en la zona horaria de Colombia.
-   * @private
-   */
-  _formatFechaCalendario(date) {
-    const partes = new Intl.DateTimeFormat('en-US', {
-      timeZone: EVENTOS_TIME_ZONE,
-      year:     'numeric',
-      month:    '2-digit',
-      day:      '2-digit',
-      hour:     '2-digit',
-      minute:   '2-digit',
-      second:   '2-digit',
-      hour12:   false,
-      hourCycle: 'h23',
-    }).formatToParts(date).reduce((acc, parte) => {
-      if (parte.type !== 'literal') acc[parte.type] = parte.value;
-      return acc;
-    }, {});
-
-    return `${partes.year}${partes.month}${partes.day}T${partes.hour}${partes.minute}${partes.second}`;
-  },
-
-  /**
-   * Construye el enlace de Google Calendar con el evento prellenado.
-   * @private
-   */
-  _buildGoogleCalendarUrl(evento) {
-    const { inicio, fin } = this._rangoEvento(evento);
-    const params = new URLSearchParams({
-      action:   'TEMPLATE',
-      text:     evento.titulo || 'Evento JAL Comuna 3',
-      dates:    `${this._formatFechaCalendario(inicio)}/${this._formatFechaCalendario(fin)}`,
-      details:  evento.descripcion || '',
-      location: evento.lugar || '',
-      ctz:      EVENTOS_TIME_ZONE,
-    });
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
   },
 
   /**
