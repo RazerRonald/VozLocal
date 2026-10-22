@@ -1,12 +1,12 @@
-const { chromium } = require('C:/Users/JUAN ECHAVARRIA/Desktop/Voz local/node_modules/playwright');
+const { chromium } = require('playwright');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
 
-const CAPTURAS_DIR = 'C:/Users/JUAN ECHAVARRIA/Desktop/IA/capturas/Voz local/sprint2';
+const CAPTURAS_DIR = path.join(__dirname, '..', 'evidencias', 'sprint2');
 const FRAMES_BASE = path.join(CAPTURAS_DIR, 'frames_temp');
 const PYTHON_PATH = 'python';
-const MAKE_GIF_SCRIPT = 'C:/Users/JUAN ECHAVARRIA/.gemini/antigravity/brain/e43313f4-c1fb-4b03-afaa-e83491aa96dd/scratch/make_gif.py';
+const MAKE_GIF_SCRIPT = path.join(__dirname, 'make_gif.py');
 
 if (!fs.existsSync(CAPTURAS_DIR)) fs.mkdirSync(CAPTURAS_DIR, { recursive: true });
 if (!fs.existsSync(FRAMES_BASE)) fs.mkdirSync(FRAMES_BASE, { recursive: true });

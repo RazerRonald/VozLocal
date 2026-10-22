@@ -61,8 +61,13 @@ Cada requisito cuenta con casos de prueba documentados, ejecutados y respaldados
 
 * **Matriz de Pruebas Sprint 1:** [`Plantilla_pruebas_JAL-E01.xlsx`](./Plantilla_pruebas_JAL-E01.xlsx) (13 casos aprobados).
 * **Matriz de Pruebas Sprint 2:** [`_pruebas_JAL-E02_Auth_Sesion.xlsx`](./_pruebas_JAL-E02_Auth_Sesion.xlsx) (43 casos aprobados).
+* **Repositorio de Evidencias Multimedia:** Carpeta organizada [`evidencias/`](./evidencias/) versionada en el proyecto:
+  * `evidencias/sprint1/`: 13 capturas PNG y 13 animaciones GIF del Sprint 1.
+  * `evidencias/sprint2/`: 43 capturas PNG y 43 animaciones GIF del Sprint 2.
+  * *Portabilidad:* Los hipervínculos de las matrices Excel están configurados con **rutas relativas** (`evidencias/sprintX/...`), por lo que cualquier integrante del equipo o evaluador puede abrir y reproducir los GIFs con un solo clic tras clonar el repositorio, sin importar la ruta donde se guarde.
 * **Responsable de Ejecución:** Juan José Echavarría Castaño.
 * **Herramienta de Automatización:** Playwright Test Runner (Chromium / Windows 11).
+* **Demostrador Visual en Pantalla:** Script interactivo [`VER_PRUEBAS_EN_PANTALLA.bat`](./VER_PRUEBAS_EN_PANTALLA.bat) con indicador HUD en tiempo real.
 
 ---
 
@@ -92,6 +97,12 @@ Para garantizar la integridad de la auditoría y evitar deuda técnica o código
 node scripts/dev.cjs
 ```
 La aplicación estará disponible de inmediato en: `http://127.0.0.1:3000`
+
+### Demostración Visual de Pruebas
+```bash
+# Ejecutar demostración interactiva en pantalla con navegador visible y HUD:
+VER_PRUEBAS_EN_PANTALLA.bat
+```
 
 ---
 *Documento elaborado por el Equipo de Aseguramiento de Calidad (QA) — Voz Local JAL Comuna 3.*
