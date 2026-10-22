@@ -28,3 +28,7 @@ npm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Excel temporales y respaldos
+*.backup.xlsx
+~$*.xlsx

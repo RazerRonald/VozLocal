@@ -9,7 +9,7 @@ import AuthModel        from './models/AuthModel.js';
 
 import Navbar           from './components/Navbar.js';
 import Toast            from './components/Toast.js';
-import DriveConnectionBubble from './components/DriveConnectionBubble.js';
+// DriveConnectionBubble planificado para Sprint 3 (SC-001)
 
 import LoginView        from './views/LoginView.js';
 import PublicoView      from './views/PublicoView.js';
@@ -310,7 +310,7 @@ function actualizarNavbar(rutaActual) {
       });
     },
   });
-  DriveConnectionBubble.render({ sesion });
+  // DriveConnectionBubble.render({ sesion }); (Sprint 3)
 }
 
 // ─── UI HELPERS ───────────────────────────────────────────────────────────
@@ -367,7 +367,7 @@ function iniciarApp() {
   window.addEventListener('beforeunload', () => {
     unsubAuth();
     detenerCierrePorInactividad();
-    DriveConnectionBubble.destruir();
+    // DriveConnectionBubble.destruir(); (Sprint 3)
     try { AdminView.destruir(); }   catch (_) {}
     try { PublicoView.destruir(); } catch (_) {}
   });

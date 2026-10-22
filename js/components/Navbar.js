@@ -94,13 +94,8 @@ const Navbar = {
         </a>
       `;
     } else if (sesion.rol === ROLES.ESTUDIANTE) {
-      // ─── Estudiante ───────────────────────────────────────────────
+      // ─── Estudiante (Sprint 2: Portal y Perfil; Trámites en Sprint 3) ────
       linksExtra = `
-        <li class="nav-item">
-          <a class="nav-link" href="#/tramite" id="nav-tramite" aria-label="Mi trámite">
-            <i class="bi bi-file-earmark-text me-1"></i>${i18n.nav.miTramite}
-          </a>
-        </li>
         ${this._buildItemCerrarSesion()}
       `;
       accionDerecha = this._buildBotonPerfil(sesion, 'estudiante');
