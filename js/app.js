@@ -9,7 +9,7 @@ import AuthModel        from './models/AuthModel.js';
 
 import Navbar           from './components/Navbar.js';
 import Toast            from './components/Toast.js';
-// DriveConnectionBubble planificado para Sprint 3 (SC-001)
+import DriveConnectionBubble from './components/DriveConnectionBubble.js';
 
 import LoginView        from './views/LoginView.js';
 import PublicoView      from './views/PublicoView.js';
@@ -17,6 +17,8 @@ import EstudianteView   from './views/EstudianteView.js';
 import AdminView        from './views/AdminView.js';
 import PerfilView       from './views/PerfilView.js';
 import SolicitudAccesoView from './views/SolicitudAccesoView.js';
+import CertificadosView from './views/CertificadosView.js';
+import AdminCertificadosView from './views/AdminCertificadosView.js';
 
 import { ROLES }        from './config/collections.js';
 import { i18n }         from './config/i18n.js';
@@ -48,6 +50,7 @@ const RUTAS = {
   '#/contacto': { handler: () => PublicoView.renderContacto(),           rolRequerido: null              },
   '#/tramite':  { handler: () => EstudianteView.renderHistorial(),       rolRequerido: ROLES.ESTUDIANTE  },
   '#/tramite/nueva': { handler: () => EstudianteView.renderFormulario(), rolRequerido: ROLES.ESTUDIANTE  },
+  '#/certificados': { handler: () => CertificadosView.render(),         rolRequerido: ROLES.ESTUDIANTE  },
   '#/perfil':   { handler: () => PerfilView.render(),                    rolRequerido: [ROLES.ESTUDIANTE, ROLES.EDIL] },
   '#/admin':    { handler: () => AdminView.renderDashboard(),            rolRequerido: ROLES.EDIL        },
   '#/publicar': { handler: () => AdminView.renderNoticias(),             rolRequerido: ROLES.EDIL        },
@@ -56,6 +59,7 @@ const RUTAS = {
   '#/admin/tramites': { handler: () => AdminView.renderTramites(),       rolRequerido: ROLES.EDIL        },
   '#/admin/usuarios': { handler: () => AdminView.renderUsuarios(),       rolRequerido: ROLES.EDIL        },
   '#/admin/solicitudes-acceso': { handler: () => AdminView.renderSolicitudesAcceso(), rolRequerido: ROLES.EDIL },
+  '#/admin/certificados': { handler: () => AdminCertificadosView.render(), rolRequerido: ROLES.EDIL },
 };
 
 const INACTIVIDAD_LIMITE_MS = 15 * 60 * 1000;
@@ -310,7 +314,7 @@ function actualizarNavbar(rutaActual) {
       });
     },
   });
-  // DriveConnectionBubble.render({ sesion }); (Sprint 3)
+  DriveConnectionBubble.render({ sesion });
 }
 
 // ─── UI HELPERS ───────────────────────────────────────────────────────────
@@ -367,7 +371,7 @@ function iniciarApp() {
   window.addEventListener('beforeunload', () => {
     unsubAuth();
     detenerCierrePorInactividad();
-    // DriveConnectionBubble.destruir(); (Sprint 3)
+    DriveConnectionBubble.destruir();
     try { AdminView.destruir(); }   catch (_) {}
     try { PublicoView.destruir(); } catch (_) {}
   });

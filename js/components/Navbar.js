@@ -94,8 +94,18 @@ const Navbar = {
         </a>
       `;
     } else if (sesion.rol === ROLES.ESTUDIANTE) {
-      // ─── Estudiante (Sprint 2: Portal y Perfil; Trámites en Sprint 3) ────
+      // ─── Estudiante ───────────────────────────────────────────────
       linksExtra = `
+        <li class="nav-item">
+          <a class="nav-link" href="#/tramite" id="nav-tramite" aria-label="Mi trámite">
+            <i class="bi bi-file-earmark-text me-1"></i>${i18n.nav.miTramite}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#/certificados" id="nav-certificados" aria-label="Mis certificados">
+            <i class="bi bi-patch-check me-1"></i>${i18n.nav.certificados}
+          </a>
+        </li>
         ${this._buildItemCerrarSesion()}
       `;
       accionDerecha = this._buildBotonPerfil(sesion, 'estudiante');
@@ -284,6 +294,7 @@ const Navbar = {
       '#/eventos':   'nav-eventos',
       '#/contacto':  'nav-contacto',
       '#/tramite':   'nav-tramite',
+      '#/certificados': 'nav-certificados',
       '#/admin':     'nav-admin',
     };
 
