@@ -24,6 +24,12 @@ export const COL_DOCUMENTOS_CARTAS = 'info_carta_documentos';
 /** Solicitudes publicas para crear accesos de estudiantes. */
 export const COL_SOLICITUDES_ACCESO = 'solicitudes_acceso';
 
+/** Certificados de servicio social (E04 / SC-001). */
+export const COL_CERTIFICADOS = 'certificados';
+
+/** Trozos base64 privados del archivo de cada certificado. Dueño o Edil. */
+export const COL_CERTIFICADOS_ARCHIVOS = 'certificados_archivos';
+
 /**
  * Roles del sistema.
  * Deben coincidir exactamente con el valor del campo `rol` en Firestore.
@@ -55,4 +61,11 @@ export const ESTADOS_TRAMITE = {
   APROBADO:  'Aprobado',
   RECHAZADO: 'Rechazado',
   EXPEDIDA:  'Expedida',
+};
+
+/** Estados de un certificado de servicio social. */
+export const ESTADOS_CERTIFICADO = {
+  PENDIENTE: 'Pendiente',
+  APROBADO:  'Aprobado',
+  RECHAZADO: 'Rechazado',
 };

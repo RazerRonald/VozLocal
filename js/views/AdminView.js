@@ -138,6 +138,21 @@ const AdminView = {
             </button>
           </div>
           <div class="col-md-6 col-xl">
+            <a href="#/admin/certificados" class="btn w-100 p-4 text-start form-jal"
+               style="cursor:pointer;border:2px solid var(--color-border);transition:all .25s;"
+               id="btn-admin-certificados"
+               aria-label="${i18n.certificados.adminTitulo}">
+              <div class="d-flex align-items-center gap-3">
+                <div class="stat-icon stat-icon-success"><i class="bi bi-patch-check fs-4"></i></div>
+                <div>
+                  <div class="fw-700">${i18n.certificados.adminTitulo}</div>
+                  <div class="text-muted small">${i18n.certificados.accesoRapidoSub}</div>
+                </div>
+                <i class="bi bi-arrow-right ms-auto text-success"></i>
+              </div>
+            </a>
+          </div>
+          <div class="col-md-6 col-xl">
             <button class="btn w-100 p-4 text-start form-jal"
                     style="cursor:pointer;border:2px solid var(--color-border);transition:all .25s;"
                     id="btn-admin-usuarios"
@@ -953,7 +968,7 @@ const AdminView = {
           </td>
           <td class="text-end">
             <div class="d-flex gap-1 justify-content-end flex-wrap">
-              ${[ESTADOS_TRAMITE.PENDIENTE, ESTADOS_TRAMITE.APROBADO].includes(t.estado) ? `
+              ${t.estado === ESTADOS_TRAMITE.APROBADO ? `
                 <button class="btn btn-sm btn-jal-primary btn-vista-previa"
                         data-id="${this._esc(t.id)}"
                         aria-label="${i18n.admin.vistaPrevia}">

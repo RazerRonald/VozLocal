@@ -19,6 +19,9 @@ test-results/
 .firebase/
 .vercel/
 
+# Python (pruebas unittest)
+__pycache__/
+
 # Debug and runtime logs
 *.log
 npm-debug.log*
