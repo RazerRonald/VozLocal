@@ -30,6 +30,9 @@ export const COL_CERTIFICADOS = 'certificados';
 /** Trozos base64 privados del archivo de cada certificado. Dueño o Edil. */
 export const COL_CERTIFICADOS_ARCHIVOS = 'certificados_archivos';
 
+/** Constancias de solicitudes de eliminacion de datos (SC001-HU06). */
+export const COL_SOLICITUDES_ELIMINACION = 'solicitudes_eliminacion';
+
 /**
  * Roles del sistema.
  * Deben coincidir exactamente con el valor del campo `rol` en Firestore.
@@ -69,3 +72,6 @@ export const ESTADOS_CERTIFICADO = {
   APROBADO:  'Aprobado',
   RECHAZADO: 'Rechazado',
 };
+
+/** Meta de horas de servicio social para la beca (SC001-HU05). */
+export const META_HORAS_SERVICIO = 80;

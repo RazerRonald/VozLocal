@@ -84,6 +84,13 @@ const AdminCertificadosView = {
             </table>
           </div>
         </section>
+
+        <section class="form-jal p-0 overflow-hidden" aria-labelledby="admin-eliminaciones-titulo">
+          <h2 class="h5 fw-700 mb-0 p-4 border-bottom" id="admin-eliminaciones-titulo">
+            <i class="bi bi-shield-lock text-primary me-2"></i>${t().eliminacionesAdmin}
+          </h2>
+          <div id="admin-eliminaciones" class="table-responsive"></div>
+        </section>
       </div>
 
       <div class="modal fade modal-jal" id="modal-revisar-certificado" tabindex="-1"
@@ -123,10 +130,11 @@ const AdminCertificadosView = {
 
   async _cargar() {
     await CertificadoController.listarTodos({
-      onSuccess: ({ certificados }) => {
+      onSuccess: ({ certificados, solicitudes }) => {
         this._certificados = certificados;
         this._renderResumen();
         this._renderTabla();
+        this._renderEliminaciones(solicitudes);
       },
       onError: (msg) => {
         const tbody = document.getElementById('tabla-certificados-body');
@@ -266,6 +274,34 @@ const AdminCertificadosView = {
       [ESTADOS_CERTIFICADO.RECHAZADO]: 'bg-danger-subtle text-danger-emphasis',
     }[estado] || 'bg-secondary-subtle';
     return `<span class="badge ${clase}">${this._esc(t().estados[estado] || estado)}</span>`;
+  },
+
+  _renderEliminaciones(solicitudes) {
+    const el = document.getElementById('admin-eliminaciones');
+    if (!el) return;
+    if (!solicitudes.length) {
+      el.innerHTML = `<p class="text-muted p-4 mb-0">${t().sinEliminaciones}</p>`;
+      return;
+    }
+    el.innerHTML = `
+      <table class="table table-jal mb-0" aria-label="${t().eliminacionesAdmin}">
+        <thead><tr>
+          <th scope="col">${t().colJoven}</th>
+          <th scope="col">${t().motivo}</th>
+          <th scope="col">${t().colFecha}</th>
+          <th scope="col">${t().colEstado}</th>
+        </tr></thead>
+        <tbody>
+          ${solicitudes.map((s) => `
+            <tr>
+              <td><div class="fw-600">${this._esc(s.nombre_estudiante)}</div><small class="text-muted">${this._esc(s.numero_documento)}</small></td>
+              <td class="small">${this._esc(s.motivo || '-')}</td>
+              <td class="small text-nowrap">${this._formatFecha(s.fecha_solicitud)}</td>
+              <td><span class="badge bg-info-subtle text-info-emphasis">${this._esc(s.estado)}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    `;
   },
 
   _formatFecha(ts) {

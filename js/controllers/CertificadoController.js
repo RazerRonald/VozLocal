@@ -8,24 +8,29 @@
 import CertificadoModel  from '../models/CertificadoModel.js';
 import AuthModel         from '../models/AuthModel.js';
 import ArchivoController from './ArchivoController.js';
+import { META_HORAS_SERVICIO } from '../config/collections.js';
 import { i18n }          from '../config/i18n.js';
 import {
   validarArchivoCertificado,
   bytesABase64,
   base64ABytes,
   partirEnTrozos,
+  calcularAvance,
 } from '../utils/certificados.js';
 
 const t = () => i18n.certificados;
 
 const CertificadoController = {
-  /** Certificados propios del joven, del más reciente al más antiguo. */
+  /** HU05: certificados propios, avance hacia la meta y constancias de eliminación. */
   async obtenerMios({ onSuccess, onError }) {
     const sesion = AuthModel.getSesion();
     if (!sesion) return onError(i18n.auth.accesoDenegado);
     try {
-      const certificados = await CertificadoModel.listarPropios(sesion.uid);
-      onSuccess({ certificados });
+      const [certificados, solicitudes] = await Promise.all([
+        CertificadoModel.listarPropios(sesion.uid),
+        CertificadoModel.listarSolicitudesEliminacionPropias(sesion.uid),
+      ]);
+      onSuccess({ certificados, solicitudes, avance: calcularAvance(certificados, META_HORAS_SERVICIO) });
     } catch (err) {
       console.error('[CertificadoController.obtenerMios]', err);
       onError(this._mensajeError(err));
@@ -94,12 +99,37 @@ const CertificadoController = {
     return new Blob([base64ABytes(base64)], { type: certificado.archivo_tipo });
   },
 
+  /** HU06: constancia de solicitud de eliminación (no borra datos). */
+  async solicitarEliminacion(motivo, { onLoading, onSuccess, onError }) {
+    const sesion = AuthModel.getSesion();
+    if (!sesion) return onError(i18n.auth.accesoDenegado);
+    onLoading(true);
+    try {
+      const perfil = ArchivoController._datosPerfilSesion(sesion);
+      const id = await CertificadoModel.solicitarEliminacion({
+        uid_estudiante:    sesion.uid,
+        nombre_estudiante: perfil.nombre_completo,
+        numero_documento:  perfil.numero_documento,
+        motivo:            this._texto(motivo, 500) || null,
+      });
+      onSuccess(id);
+    } catch (err) {
+      console.error('[CertificadoController.solicitarEliminacion]', err);
+      onError(this._mensajeError(err));
+    } finally {
+      onLoading(false);
+    }
+  },
+
   // ─── Revisor (Edil) ──────────────────────────────────────────────────
 
   async listarTodos({ onSuccess, onError }) {
     try {
-      const certificados = await CertificadoModel.listarTodos();
-      onSuccess({ certificados });
+      const [certificados, solicitudes] = await Promise.all([
+        CertificadoModel.listarTodos(),
+        CertificadoModel.listarSolicitudesEliminacion(),
+      ]);
+      onSuccess({ certificados, solicitudes });
     } catch (err) {
       console.error('[CertificadoController.listarTodos]', err);
       onError(this._mensajeError(err));
