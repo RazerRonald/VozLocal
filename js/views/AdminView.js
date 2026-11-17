@@ -1320,8 +1320,10 @@ const AdminView = {
 
     if (tituloEl) tituloEl.textContent = i18n.admin.modalCartaTitulo;
     btnDescargar.innerHTML = `<i class="bi bi-download me-1"></i>${i18n.admin.descargarCarta}`;
-    btnExpedir.classList.add('d-none');
-    btnExpedir.disabled = true;
+    // El modal es compartido con la carta de finalización: se restaura el texto propio.
+    btnExpedir.innerHTML = `<i class="bi bi-check2-circle me-1"></i>${i18n.admin.marcarExpedida}`;
+    btnExpedir.classList.remove('d-none');
+    btnExpedir.disabled = false;
 
     const fechaCarta = new Date().toLocaleDateString('es-CO', {
       day: 'numeric', month: 'long', year: 'numeric',
@@ -1373,6 +1375,30 @@ const AdminView = {
         onSuccess: ({ blob, nombreArchivo }) => {
           this._descargarBlob(blob, nombreArchivo);
           Toast.exito(i18n.admin.descargadoOk);
+        },
+        onError: (msg) => Toast.error(msg),
+      });
+    });
+
+    // ─── Botón: Expedir (JAL-027 sube a Drive por estudiante; JAL-028 marca Expedida) ───
+    const newBtnExp = btnExpedir.cloneNode(true);
+    btnExpedir.parentNode.replaceChild(newBtnExp, btnExpedir);
+
+    newBtnExp.addEventListener('click', async () => {
+      await ArchivoController.expedirDocumento(tramite.id, tramite, {
+        onLoading: (v) => {
+          const prog = document.getElementById('modal-carta-progress');
+          if (prog) prog.classList.toggle('d-none', !v);
+          newBtnExp.disabled = v;
+          newBtnDesc.disabled = v;
+        },
+        onProgress: (msg) => {
+          const el = document.getElementById('modal-carta-progress-msg');
+          if (el) el.textContent = msg;
+        },
+        onSuccess: () => {
+          Toast.exito(i18n.admin.expedidoOk);
+          bsModal.hide();
         },
         onError: (msg) => Toast.error(msg),
       });
