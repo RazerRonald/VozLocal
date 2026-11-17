@@ -686,6 +686,18 @@ service cloud.firestore {
         && data.parte < cert.archivo_partes;
     }
 
+    function solicitudEliminacionValida() {
+      let data = request.resource.data;
+      return autenticado()
+        && data.keys().hasOnly(['uid_estudiante', 'nombre_estudiante', 'numero_documento', 'motivo', 'estado', 'fecha_solicitud'])
+        && data.keys().hasAll(['uid_estudiante', 'nombre_estudiante', 'numero_documento', 'motivo', 'estado', 'fecha_solicitud'])
+        && data.uid_estudiante == request.auth.uid
+        && perfilEstudianteCoincide(data)
+        && stringOpcional(data, 'motivo', 500)
+        && data.estado == 'Recibida'
+        && data.fecha_solicitud == request.time;
+    }
+
     match /noticias/{noticiaId} {
       allow read: if true;
 
@@ -788,6 +800,13 @@ service cloud.firestore {
       allow list: if false; // Se lee por ID conocido; evita enumerar archivos ajenos.
       allow create: if parteCertificadoValida(parteId);
       allow update, delete: if false;
+    }
+
+    match /solicitudes_eliminacion/{solicitudId} {
+      allow get, list: if autenticado()
+        && (esEdil() || resource.data.uid_estudiante == request.auth.uid);
+      allow create: if solicitudEliminacionValida();
+      allow update, delete: if false; // Procedimiento institucional aún sin definir.
     }
 
     match /solicitudes_acceso/{solicitudId} {

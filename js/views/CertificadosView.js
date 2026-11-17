@@ -36,6 +36,10 @@ const CertificadosView = {
       </div>
 
       <div class="container py-5">
+        <section id="cert-avance" class="form-jal mb-4" aria-labelledby="cert-avance-titulo" aria-live="polite">
+          <div class="text-muted"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>${i18n.app.cargando}</div>
+        </section>
+
         <div class="row g-4">
           <div class="col-lg-5">
             <section class="form-jal" aria-labelledby="cert-form-titulo">
@@ -54,24 +58,64 @@ const CertificadosView = {
             </section>
           </div>
         </div>
+
+        <section class="form-jal mt-4" aria-labelledby="cert-eliminacion-titulo">
+          <h2 class="h5 fw-700 mb-2" id="cert-eliminacion-titulo">
+            <i class="bi bi-shield-lock text-primary me-2"></i>${t().eliminacionTitulo}
+          </h2>
+          <p class="text-muted small mb-3">${t().eliminacionTexto}</p>
+          <div id="cert-eliminacion-estado"></div>
+          <label for="cert-eliminacion-motivo" class="form-label">${t().eliminacionMotivo}</label>
+          <textarea id="cert-eliminacion-motivo" class="form-control mb-3" rows="2" maxlength="500"></textarea>
+          <div id="cert-eliminacion-acciones"></div>
+        </section>
       </div>
     `;
 
     this._bindFormulario();
+    this._mostrarBotonEliminacion();
     await this._cargar();
   },
 
   async _cargar() {
     await CertificadoController.obtenerMios({
-      onSuccess: ({ certificados }) => {
+      onSuccess: ({ certificados, solicitudes, avance }) => {
         this._certificados = certificados;
+        this._renderAvance(avance);
         this._renderListado(certificados);
+        this._renderEliminacion(solicitudes);
       },
       onError: (msg) => {
-        const listado = document.getElementById('cert-listado');
-        if (listado) listado.innerHTML = `<div class="alert alert-warning m-4">${this._esc(msg)}</div>`;
+        const avance = document.getElementById('cert-avance');
+        if (avance) avance.innerHTML = `<div class="alert alert-warning mb-0">${this._esc(msg)}</div>`;
       },
     });
+  },
+
+  _renderAvance({ horas, meta, faltan, cumplida, porcentaje }) {
+    const el = document.getElementById('cert-avance');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+        <h2 class="h5 fw-700 mb-0" id="cert-avance-titulo">
+          <i class="bi bi-graph-up-arrow text-primary me-2"></i>${t().avanceTitulo}
+        </h2>
+        <span class="badge ${cumplida ? 'bg-success-subtle text-success-emphasis' : 'bg-warning-subtle text-warning-emphasis'}" id="cert-meta-estado">
+          <i class="bi ${cumplida ? 'bi-check-circle' : 'bi-hourglass-split'} me-1" aria-hidden="true"></i>${cumplida ? t().metaCumplida : t().metaPendiente}
+        </span>
+      </div>
+      <p class="mb-2">
+        <span class="display-6 fw-700" id="cert-horas-total">${horas}</span>
+        <span class="text-muted">/ ${meta} ${t().horasAprobadas}</span>
+      </p>
+      <div class="progress mb-2" role="progressbar" aria-label="${t().horasAprobadas}"
+           aria-valuenow="${horas}" aria-valuemin="0" aria-valuemax="${meta}" style="height:12px;">
+        <div class="progress-bar ${cumplida ? 'bg-success' : ''}" style="width:${porcentaje}%"></div>
+      </div>
+      <p class="small text-muted mb-0">
+        ${cumplida ? '' : this._esc(t().faltan.replace('{n}', faltan).replace('{meta}', meta)) + ' '}${t().soloAprobadas}
+      </p>
+    `;
   },
 
   _renderListado(certificados) {
@@ -112,6 +156,57 @@ const CertificadosView = {
       if (!cert) return;
       if (btn.classList.contains('btn-cert-ver')) this._descargar(cert, btn);
     };
+  },
+
+  /** Solo actualiza el aviso: recargar la lista no debe borrar el motivo que se está escribiendo. */
+  _renderEliminacion(solicitudes) {
+    const el = document.getElementById('cert-eliminacion-estado');
+    if (!el) return;
+    const ultima = solicitudes[0];
+    el.innerHTML = ultima ? `
+      <div class="alert alert-info small" role="status">
+        ${this._esc(t().eliminacionRegistrada.replace('{fecha}', this._formatFecha(ultima.fecha_solicitud)).replace('{estado}', ultima.estado))}
+      </div>` : '';
+  },
+
+  _mostrarBotonEliminacion() {
+    const acciones = document.getElementById('cert-eliminacion-acciones');
+    if (!acciones) return;
+    acciones.innerHTML = `
+      <button type="button" class="btn btn-outline-danger" id="btn-cert-eliminacion">
+        <i class="bi bi-trash3 me-1"></i>${t().eliminacionBoton}
+      </button>
+    `;
+    document.getElementById('btn-cert-eliminacion')?.addEventListener('click', () => this._confirmarEliminacion());
+  },
+
+  /** Confirmación en línea: dos pasos y sin modal, usable con teclado. */
+  _confirmarEliminacion() {
+    const acciones = document.getElementById('cert-eliminacion-acciones');
+    if (!acciones) return;
+    acciones.innerHTML = `
+      <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 mb-0" role="alert">
+        <span class="me-auto">${t().eliminacionConfirmar}</span>
+        <button type="button" class="btn btn-sm btn-secondary" id="btn-cert-eliminacion-cancelar">${i18n.app.cancelar}</button>
+        <button type="button" class="btn btn-sm btn-danger" id="btn-cert-eliminacion-confirmar">${i18n.app.confirmar}</button>
+      </div>
+    `;
+    const confirmar = document.getElementById('btn-cert-eliminacion-confirmar');
+    confirmar?.focus();
+    document.getElementById('btn-cert-eliminacion-cancelar')?.addEventListener('click', () => this._mostrarBotonEliminacion());
+    confirmar?.addEventListener('click', () => {
+      const motivo = document.getElementById('cert-eliminacion-motivo');
+      CertificadoController.solicitarEliminacion(motivo?.value, {
+        onLoading: (cargando) => { confirmar.disabled = cargando; },
+        onSuccess: () => {
+          Toast.exito(t().eliminacionOk);
+          if (motivo) motivo.value = '';
+          this._mostrarBotonEliminacion();
+          this._cargar();
+        },
+        onError: (msg) => Toast.error(msg),
+      });
+    });
   },
 
   _buildFormulario() {

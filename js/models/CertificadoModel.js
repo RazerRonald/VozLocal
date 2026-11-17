@@ -13,6 +13,7 @@ import { db } from '../config/firebase.config.js';
 import {
   COL_CERTIFICADOS,
   COL_CERTIFICADOS_ARCHIVOS,
+  COL_SOLICITUDES_ELIMINACION,
   ESTADOS_CERTIFICADO,
 } from '../config/collections.js';
 import {
@@ -20,6 +21,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  addDoc,
   query,
   where,
   orderBy,
@@ -121,6 +123,28 @@ const CertificadoModel = {
       }
       tx.update(ref, { ...cambios, fecha_revision: serverTimestamp(), uid_revisor: uidRevisor });
     });
+  },
+
+  /** HU06: deja constancia; no borra nada. */
+  async solicitarEliminacion(datos) {
+    const ref = await addDoc(collection(db, COL_SOLICITUDES_ELIMINACION), {
+      ...datos,
+      estado:          'Recibida',
+      fecha_solicitud: serverTimestamp(),
+    });
+    return ref.id;
+  },
+
+  async listarSolicitudesEliminacionPropias(uid) {
+    const snap = await getDocs(query(collection(db, COL_SOLICITUDES_ELIMINACION), where('uid_estudiante', '==', uid)));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => fechaMs(b.fecha_solicitud) - fechaMs(a.fecha_solicitud));
+  },
+
+  async listarSolicitudesEliminacion() {
+    const snap = await getDocs(query(collection(db, COL_SOLICITUDES_ELIMINACION), orderBy('fecha_solicitud', 'desc')));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   },
 };
 

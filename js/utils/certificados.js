@@ -1,6 +1,6 @@
 /**
  * @fileoverview Funciones puras de certificados (SC-001): validación de archivo,
- * codificación en trozos. Sin imports para poder probarlas
+ * codificación en trozos y cálculo del avance. Sin imports para poder probarlas
  * en Node (tests/security/certificados-util.test.cjs).
  *
  * @module utils/certificados
@@ -69,4 +69,22 @@ export function partirEnTrozos(texto, tamano = CERTIFICADO_PARTE_CHARS) {
   const partes = [];
   for (let i = 0; i < texto.length; i += tamano) partes.push(texto.slice(i, i + tamano));
   return partes;
+}
+
+/**
+ * HU05: suma solo horas de certificados Aprobados; no recorta el acumulado real.
+ * @param {Array<{estado: string, horas_aprobadas: number}>} certificados
+ * @param {number} meta
+ */
+export function calcularAvance(certificados, meta) {
+  const horas = certificados
+    .filter((c) => c.estado === 'Aprobado')
+    .reduce((total, c) => total + (Number(c.horas_aprobadas) || 0), 0);
+  return {
+    horas,
+    meta,
+    faltan: Math.max(0, meta - horas),
+    cumplida: horas >= meta,
+    porcentaje: Math.min(100, Math.round((horas / meta) * 100)),
+  };
 }
