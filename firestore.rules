@@ -646,8 +646,8 @@ service cloud.firestore {
         && partesCertificadoPresentes(certId, data);
     }
 
-    // HU02: aprobar o rechazar un certificado Pendiente.
-    // Exigir el estado previo evita revisar dos veces el mismo certificado.
+    // HU02 y HU04: aprobar/rechazar un Pendiente o revertir un Aprobado.
+    // Exigir el estado previo hace idempotente la reversión ante reintentos.
     function certificadoRevisionEdilValida() {
       let antes = resource.data;
       let despues = request.resource.data;
@@ -664,7 +664,37 @@ service cloud.firestore {
           || (antes.estado == 'Pendiente' && despues.estado == 'Rechazado'
             && cambios.hasOnly(['estado', 'motivo_rechazo', 'fecha_revision', 'uid_revisor'])
             && stringNoVacio(despues.motivo_rechazo, 1000))
+          || (antes.estado == 'Aprobado' && despues.estado == 'Rechazado'
+            && cambios.hasOnly(['estado', 'horas_aprobadas', 'motivo_rechazo', 'revertido', 'fecha_revision', 'uid_revisor'])
+            && despues.horas_aprobadas == 0
+            && despues.revertido == true
+            && stringNoVacio(despues.motivo_rechazo, 1000))
         );
+    }
+
+    // HU03: solo el dueño reenvía un Rechazado; vuelve a Pendiente con 0 horas.
+    function certificadoCorreccionValida(certId) {
+      let antes = resource.data;
+      let despues = request.resource.data;
+      return autenticado()
+        && antes.uid_estudiante == request.auth.uid
+        && antes.estado == 'Rechazado'
+        && despues.estado == 'Pendiente'
+        && despues.diff(antes).affectedKeys().hasOnly([
+          'estado', 'version', 'actividad', 'entidad', 'horas_reportadas',
+          'archivo_nombre', 'archivo_tipo', 'archivo_tamano', 'archivo_partes',
+          'motivo_rechazo', 'revertido', 'fecha_carga', 'fecha_revision', 'uid_revisor'
+        ])
+        && despues.version == antes.version + 1
+        && datosCertificadoValidos(despues)
+        && archivoCertificadoValido(despues)
+        && despues.horas_aprobadas == 0
+        && despues.motivo_rechazo == null
+        && despues.revertido == false
+        && despues.fecha_carga == request.time
+        && despues.fecha_revision == null
+        && despues.uid_revisor == null
+        && partesCertificadoPresentes(certId, despues);
     }
 
     function parteCertificadoValida(parteId) {
@@ -778,7 +808,7 @@ service cloud.firestore {
       allow get, list: if autenticado()
         && (esEdil() || resource.data.uid_estudiante == request.auth.uid);
       allow create: if certificadoCreacionValida(certId);
-      allow update: if certificadoRevisionEdilValida();
+      allow update: if certificadoRevisionEdilValida() || certificadoCorreccionValida(certId);
       allow delete: if false; // HU06: el borrado se atiende por solicitud, no desde el cliente.
     }
 

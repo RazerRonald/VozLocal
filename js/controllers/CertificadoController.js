@@ -63,6 +63,31 @@ const CertificadoController = {
     }
   },
 
+  /** HU03: reemplaza el archivo de un certificado propio Rechazado. */
+  async corregir(certificado, formData, archivo, { onLoading, onSuccess, onError }) {
+    const sesion = AuthModel.getSesion();
+    if (!sesion || certificado.uid_estudiante !== sesion.uid) return onError(i18n.auth.accesoDenegado);
+
+    const { actividad, entidad, horas_reportadas } = this._datosFormulario(formData);
+    const error = this._validarDatos({ actividad, entidad, horas_reportadas });
+    if (error) return onError(error);
+
+    onLoading(true);
+    try {
+      const archivoListo = await this._prepararArchivo(archivo);
+      if (archivoListo.error) return onError(archivoListo.error);
+      await CertificadoModel.corregir(certificado, {
+        actividad, entidad, horas_reportadas, ...archivoListo.metadatos,
+      }, archivoListo.partes);
+      onSuccess();
+    } catch (err) {
+      console.error('[CertificadoController.corregir]', err);
+      onError(this._mensajeError(err));
+    } finally {
+      onLoading(false);
+    }
+  },
+
   /** HU06: el archivo solo se entrega como Blob local, nunca como URL pública. */
   async obtenerArchivo(certificado) {
     const base64 = await CertificadoModel.leerArchivo(certificado);
@@ -94,6 +119,13 @@ const CertificadoController = {
     const texto = this._texto(motivo, 1000);
     if (!texto) return callbacks.onError(t().errorMotivo);
     return this._revisar(callbacks, (uid) => CertificadoModel.rechazar(certificado.id, texto, uid));
+  },
+
+  /** HU04: revierte una aprobación; el motivo es visible para el joven. */
+  revertir(certificado, motivo, callbacks) {
+    const texto = this._texto(motivo, 1000);
+    if (!texto) return callbacks.onError(t().errorMotivo);
+    return this._revisar(callbacks, (uid) => CertificadoModel.revertir(certificado.id, texto, uid));
   },
 
   async _revisar({ onLoading, onSuccess, onError }, accion) {

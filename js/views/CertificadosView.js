@@ -1,6 +1,6 @@
 /**
  * @fileoverview CertificadosView — Vista del joven becado (#/certificados):
- * carga de certificados y consulta de su estado (E04 / SC-001).
+ * carga y corrección de certificados (E04 / SC-001).
  *
  * @module views/CertificadosView
  */
@@ -15,11 +15,14 @@ const t = () => i18n.certificados;
 
 const CertificadosView = {
   _certificados: [],
+  /** Certificado Rechazado que se está corrigiendo (HU03), o null. */
+  _corrigiendo: null,
 
   async render() {
     const root = document.getElementById('app-root');
     const sesion = AuthModel.getSesion();
     if (!root || !sesion) return;
+    this._corrigiendo = null;
 
     root.innerHTML = `
       <div class="page-hero">
@@ -96,12 +99,16 @@ const CertificadosView = {
         </div>
         ${c.estado === ESTADOS_CERTIFICADO.RECHAZADO && c.motivo_rechazo ? `
           <div class="alert alert-danger small py-2 mt-2 mb-0">
-            <strong>${t().motivo}:</strong> ${this._esc(c.motivo_rechazo)}
+            ${c.revertido ? `<strong>${t().revertidoNota}.</strong> ` : ''}<strong>${t().motivo}:</strong> ${this._esc(c.motivo_rechazo)}
           </div>` : ''}
         <div class="d-flex gap-2 flex-wrap mt-3">
           <button type="button" class="btn btn-sm btn-outline-primary btn-cert-ver" data-id="${this._esc(c.id)}">
             <i class="bi bi-file-earmark-arrow-down me-1"></i>${t().verArchivo}
           </button>
+          ${c.estado === ESTADOS_CERTIFICADO.RECHAZADO ? `
+            <button type="button" class="btn btn-sm btn-outline-warning btn-cert-corregir" data-id="${this._esc(c.id)}">
+              <i class="bi bi-arrow-repeat me-1"></i>${t().corregir}
+            </button>` : ''}
         </div>
       </div>
     `).join('');
@@ -111,6 +118,7 @@ const CertificadosView = {
       const cert = btn && this._certificados.find((c) => c.id === btn.dataset.id);
       if (!cert) return;
       if (btn.classList.contains('btn-cert-ver')) this._descargar(cert, btn);
+      if (btn.classList.contains('btn-cert-corregir')) this._iniciarCorreccion(cert);
     };
   },
 
@@ -163,6 +171,7 @@ const CertificadosView = {
           <button type="submit" class="btn-jal-primary d-inline-flex align-items-center gap-2" id="btn-cert-enviar">
             <i class="bi bi-send" aria-hidden="true"></i><span id="btn-cert-enviar-texto">${t().enviar}</span>
           </button>
+          <button type="button" class="btn-jal-secondary d-none" id="btn-cert-cancelar-correccion">${i18n.app.cancelar}</button>
         </div>
       </form>
     `;
@@ -175,6 +184,7 @@ const CertificadosView = {
       document.getElementById('cert-bloque-acudiente')?.classList.toggle('d-none', !esMenor.checked);
       esMenor.setAttribute('aria-expanded', String(esMenor.checked));
     });
+    document.getElementById('btn-cert-cancelar-correccion')?.addEventListener('click', () => this._salirCorreccion());
     form?.addEventListener('submit', (event) => {
       event.preventDefault();
       this._enviar(form);
@@ -191,16 +201,42 @@ const CertificadosView = {
         if (btn) btn.disabled = cargando;
       },
       onSuccess: () => {
-        Toast.exito(t().cargadoOk);
-        document.getElementById('form-certificado')?.reset();
-        document.getElementById('cert-bloque-acudiente')?.classList.add('d-none');
-        document.getElementById('cert-es-menor')?.setAttribute('aria-expanded', 'false');
+        Toast.exito(this._corrigiendo ? t().corregidoOk : t().cargadoOk);
+        this._salirCorreccion();
         this._cargar();
       },
       onError: (msg) => Toast.error(msg),
     };
 
-    await CertificadoController.cargar(formData, archivo, callbacks);
+    if (this._corrigiendo) await CertificadoController.corregir(this._corrigiendo, formData, archivo, callbacks);
+    else await CertificadoController.cargar(formData, archivo, callbacks);
+  },
+
+  /** HU03: reutiliza el formulario; los consentimientos ya otorgados se conservan. */
+  _iniciarCorreccion(cert) {
+    this._corrigiendo = cert;
+    document.getElementById('cert-actividad').value = cert.actividad;
+    document.getElementById('cert-entidad').value = cert.entidad;
+    document.getElementById('cert-horas').value = cert.horas_reportadas;
+    document.getElementById('cert-archivo').value = '';
+    document.getElementById('cert-consentimientos')?.classList.add('d-none');
+    document.getElementById('cert-form-titulo-texto').textContent = t().corregirTitulo;
+    document.getElementById('btn-cert-enviar-texto').textContent = t().enviarCorreccion;
+    document.getElementById('btn-cert-cancelar-correccion')?.classList.remove('d-none');
+    document.getElementById('cert-archivo')?.focus();
+  },
+
+  _salirCorreccion() {
+    this._corrigiendo = null;
+    document.getElementById('form-certificado')?.reset();
+    document.getElementById('cert-bloque-acudiente')?.classList.add('d-none');
+    document.getElementById('cert-es-menor')?.setAttribute('aria-expanded', 'false');
+    document.getElementById('cert-consentimientos')?.classList.remove('d-none');
+    const titulo = document.getElementById('cert-form-titulo-texto');
+    if (titulo) titulo.textContent = t().cargarTitulo;
+    const texto = document.getElementById('btn-cert-enviar-texto');
+    if (texto) texto.textContent = t().enviar;
+    document.getElementById('btn-cert-cancelar-correccion')?.classList.add('d-none');
   },
 
   async _descargar(cert, btn) {

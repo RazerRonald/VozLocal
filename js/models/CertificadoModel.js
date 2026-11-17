@@ -58,6 +58,28 @@ const CertificadoModel = {
     return ref.id;
   },
 
+  /**
+   * HU03: nueva versión de un certificado Rechazado; vuelve a Pendiente.
+   * Las versiones anteriores del archivo se conservan (historial por definir).
+   */
+  async corregir(certificado, datos, partes) {
+    const version = certificado.version + 1;
+    const batch = writeBatch(db);
+    batch.update(doc(db, COL_CERTIFICADOS, certificado.id), {
+      ...datos,
+      estado:         ESTADOS_CERTIFICADO.PENDIENTE,
+      version,
+      archivo_partes: partes.length,
+      motivo_rechazo: null,
+      revertido:      false,
+      fecha_carga:    serverTimestamp(),
+      fecha_revision: null,
+      uid_revisor:    null,
+    });
+    this._agregarPartes(batch, certificado.id, version, certificado.uid_estudiante, partes);
+    await batch.commit();
+  },
+
   _agregarPartes(batch, certId, version, uid, partes) {
     partes.forEach((datos, parte) => {
       batch.set(doc(db, COL_CERTIFICADOS_ARCHIVOS, parteId(certId, version, parte)), {
@@ -105,6 +127,16 @@ const CertificadoModel = {
     return this._revisar(certId, ESTADOS_CERTIFICADO.PENDIENTE, {
       estado:         ESTADOS_CERTIFICADO.RECHAZADO,
       motivo_rechazo: motivo,
+    }, uidRevisor);
+  },
+
+  /** HU04: descuenta exactamente las horas de este certificado (quedan en 0). */
+  revertir(certId, motivo, uidRevisor) {
+    return this._revisar(certId, ESTADOS_CERTIFICADO.APROBADO, {
+      estado:          ESTADOS_CERTIFICADO.RECHAZADO,
+      horas_aprobadas: 0,
+      revertido:       true,
+      motivo_rechazo:  motivo,
     }, uidRevisor);
   },
 

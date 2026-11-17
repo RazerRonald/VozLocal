@@ -1,6 +1,6 @@
 /**
  * @fileoverview AdminCertificadosView — Revisión de certificados de servicio
- * social por el Edil (#/admin/certificados): aprobar o rechazar
+ * social por el Edil (#/admin/certificados): aprobar, rechazar y revertir
  * (E04 / SC-001).
  *
  * @module views/AdminCertificadosView
@@ -115,6 +115,7 @@ const AdminCertificadosView = {
       if (btn.classList.contains('btn-cert-ver')) this._ver(cert, btn);
       if (btn.classList.contains('btn-cert-aprobar')) this._abrirRevision(cert, 'aprobar');
       if (btn.classList.contains('btn-cert-rechazar')) this._abrirRevision(cert, 'rechazar');
+      if (btn.classList.contains('btn-cert-revertir')) this._abrirRevision(cert, 'revertir');
     });
 
     await this._cargar();
@@ -171,7 +172,7 @@ const AdminCertificadosView = {
           <div>${this._esc(c.actividad)}</div>
           <small class="text-muted">${this._esc(c.entidad)} · ${this._formatFecha(c.fecha_carga)}</small>
           ${c.estado === ESTADOS_CERTIFICADO.RECHAZADO && c.motivo_rechazo ? `
-            <div class="small text-danger mt-1">${t().motivo}: ${this._esc(c.motivo_rechazo)}</div>` : ''}
+            <div class="small text-danger mt-1">${c.revertido ? `${t().revertidoNota}. ` : ''}${t().motivo}: ${this._esc(c.motivo_rechazo)}</div>` : ''}
         </td>
         <td class="text-nowrap">
           <strong>${c.estado === ESTADOS_CERTIFICADO.APROBADO ? c.horas_aprobadas : 0}</strong>
@@ -190,19 +191,23 @@ const AdminCertificadosView = {
               <button type="button" class="btn btn-sm btn-outline-danger btn-cert-rechazar" data-id="${this._esc(c.id)}">
                 <i class="bi bi-x-lg me-1"></i>${t().rechazar}
               </button>` : ''}
+            ${c.estado === ESTADOS_CERTIFICADO.APROBADO ? `
+              <button type="button" class="btn btn-sm btn-outline-warning btn-cert-revertir" data-id="${this._esc(c.id)}">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>${t().revertir}
+              </button>` : ''}
           </div>
         </td>
       </tr>
     `).join('');
   },
 
-  /** HU02: modal con horas verificadas o motivo obligatorio. */
+  /** HU02/HU04: modal con horas verificadas o motivo obligatorio. */
   _abrirRevision(cert, accion) {
     const modalEl = document.getElementById('modal-revisar-certificado');
     const form = document.getElementById('form-revisar-certificado');
     if (!modalEl || !form) return;
 
-    const titulos = { aprobar: t().aprobarTitulo, rechazar: t().rechazarTitulo };
+    const titulos = { aprobar: t().aprobarTitulo, rechazar: t().rechazarTitulo, revertir: t().revertirTitulo };
     document.getElementById('modal-revisar-certificado-titulo').textContent = titulos[accion];
     document.getElementById('modal-revisar-certificado-body').innerHTML = `
       <p class="mb-3"><strong>${this._esc(cert.nombre_estudiante)}</strong> · ${this._esc(cert.actividad)}
@@ -216,7 +221,7 @@ const AdminCertificadosView = {
                   placeholder="${t().motivoPlaceholder}"></textarea>`}
     `;
     const boton = document.getElementById('btn-confirmar-revision');
-    boton.className = `btn btn-${accion === 'aprobar' ? 'success' : 'danger'}`;
+    boton.className = `btn btn-${accion === 'aprobar' ? 'success' : accion === 'rechazar' ? 'danger' : 'warning'}`;
 
     const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
     form.onsubmit = (event) => {
