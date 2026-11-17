@@ -5,7 +5,7 @@ Ejecutar desde la raíz del repo:  python -m unittest discover -s tests/unittest
 import re
 import unittest
 
-from puente import ejecutar_js
+from puente import ejecutar_js, leer
 
 CTRL = {'C': 'js/controllers/CertificadoController.js', 'A': 'js/models/AuthModel.js',
         'M': 'js/models/CertificadoModel.js', 'I': 'js/config/i18n.js'}
@@ -93,6 +93,15 @@ class CartasDocxDriveJAL025a028(unittest.TestCase):
     def test_sufijo_de_fecha_evita_nombres_duplicados_JAL028(self):
         sufijo = ejecutar_js(TRAMITE, 'return R._timestampArchivo();')
         self.assertTrue(re.fullmatch(r'\d{4}-\d{2}-\d{2}_\d{4}', sufijo), sufijo)
+
+    def test_vista_previa_de_carta_inicial_permite_expedir_JAL027_JAL028(self):
+        # Defecto encontrado el 16/11/2026: el botón Expedir se ocultaba siempre y nadie llamaba a expedirDocumento.
+        vista = leer('js/views/AdminView.js')
+        inicio = vista.index('  _mostrarVistaPrevia(tramite) {')
+        cuerpo = vista[inicio:vista.index('  _mostrarVistaPreviaFinalizacion(', inicio)]
+        self.assertNotIn("btnExpedir.classList.add('d-none')", cuerpo)
+        self.assertIn('ArchivoController.expedirDocumento(tramite.id, tramite,', cuerpo)
+        self.assertIn('i18n.admin.marcarExpedida', cuerpo)
 
 
 if __name__ == '__main__':
