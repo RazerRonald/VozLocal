@@ -74,8 +74,8 @@ const VIEWPORTS = [
 // Rutas agrupadas por sesion requerida. '#/noticias/:id' se resuelve en runtime.
 const GRUPOS = [
   { rol: 'publico',    rutas: ['#/inicio', '#/noticias', '#/noticias/:id', '#/eventos', '#/contacto', '#/login', '#/solicitar-acceso'] },
-  { rol: 'estudiante', rutas: ['#/tramite', '#/tramite/nueva', '#/perfil'] },
-  { rol: 'edil',       rutas: ['#/admin', '#/publicar', '#/admin/noticias', '#/admin/eventos', '#/admin/tramites', '#/admin/usuarios', '#/admin/solicitudes-acceso', '#/perfil'] },
+  { rol: 'estudiante', rutas: ['#/tramite', '#/tramite/nueva', '#/certificados', '#/perfil'] },
+  { rol: 'edil',       rutas: ['#/admin', '#/publicar', '#/admin/noticias', '#/admin/eventos', '#/admin/tramites', '#/admin/usuarios', '#/admin/solicitudes-acceso', '#/admin/certificados', '#/perfil'] },
 ];
 
 const esperar = (ms) => new Promise((res) => setTimeout(res, ms));

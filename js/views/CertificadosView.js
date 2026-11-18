@@ -10,6 +10,7 @@ import AuthModel             from '../models/AuthModel.js';
 import Toast                 from '../components/Toast.js';
 import { i18n }              from '../config/i18n.js';
 import { ESTADOS_CERTIFICADO } from '../config/collections.js';
+import { esMenorDeEdad, hoyIso } from '../utils/certificados.js';
 
 const t = () => i18n.certificados;
 
@@ -73,6 +74,7 @@ const CertificadosView = {
           <div id="cert-eliminacion-acciones"></div>
         </section>
       </div>
+      ${this._buildModalTerminos()}
     `;
 
     this._bindFormulario();
@@ -84,6 +86,7 @@ const CertificadosView = {
     await CertificadoController.obtenerMios({
       onSuccess: ({ certificados, solicitudes, avance }) => {
         this._certificados = certificados;
+        this._precargarFechaNacimiento();
         this._renderAvance(avance);
         this._renderListado(certificados);
         this._renderEliminacion(solicitudes);
@@ -241,20 +244,28 @@ const CertificadosView = {
 
         <fieldset id="cert-consentimientos" class="mb-3">
           <legend class="form-label fs-6 fw-600">Consentimientos</legend>
+          <div class="mb-3">
+            <label for="cert-fecha-nacimiento" class="form-label small">${t().campoFechaNacimiento} *</label>
+            <input type="date" id="cert-fecha-nacimiento" name="fecha_nacimiento" class="form-control" required
+                   min="1900-01-01" max="${hoyIso()}" aria-describedby="cert-fecha-nacimiento-ayuda"
+                   aria-controls="cert-bloque-menor" />
+            <div id="cert-fecha-nacimiento-ayuda" class="form-text">${t().ayudaFechaNacimiento}</div>
+          </div>
           <div class="form-check mb-2">
             <input class="form-check-input" type="checkbox" id="cert-consentimiento-joven" name="consentimiento_joven" />
             <label class="form-check-label small" for="cert-consentimiento-joven">${t().consentimientoJoven} *</label>
           </div>
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="cert-es-menor" name="es_menor" aria-controls="cert-bloque-acudiente" aria-expanded="false" />
-            <label class="form-check-label small" for="cert-es-menor">${t().esMenor}</label>
-          </div>
-          <div id="cert-bloque-acudiente" class="border rounded p-3 d-none">
+          <div id="cert-bloque-menor" class="border rounded p-3 d-none" aria-live="polite">
+            <p class="small fw-600 mb-2"><i class="bi bi-person-exclamation me-1" aria-hidden="true"></i>${t().avisoMenor}</p>
             <label for="cert-acudiente-nombre" class="form-label small">${t().acudienteNombre} *</label>
-            <input type="text" id="cert-acudiente-nombre" name="acudiente_nombre" class="form-control mb-2" maxlength="120" />
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="cert-consentimiento-acudiente" name="consentimiento_acudiente" />
-              <label class="form-check-label small" for="cert-consentimiento-acudiente">${t().consentimientoAcudiente} *</label>
+            <input type="text" id="cert-acudiente-nombre" name="acudiente_nombre" class="form-control mb-3" maxlength="120" autocomplete="off" />
+            <input type="hidden" id="cert-terminos-menor" name="terminos_menor_aceptados" value="" />
+            <div class="d-flex align-items-center flex-wrap gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btn-cert-terminos"
+                      aria-haspopup="dialog" aria-controls="modal-terminos-menor">
+                <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>${t().verTerminos} *
+              </button>
+              <span id="cert-terminos-estado" class="small text-warning-emphasis" role="status"></span>
             </div>
           </div>
         </fieldset>
@@ -274,16 +285,86 @@ const CertificadosView = {
 
   _bindFormulario() {
     const form = document.getElementById('form-certificado');
-    const esMenor = document.getElementById('cert-es-menor');
-    esMenor?.addEventListener('change', () => {
-      document.getElementById('cert-bloque-acudiente')?.classList.toggle('d-none', !esMenor.checked);
-      esMenor.setAttribute('aria-expanded', String(esMenor.checked));
-    });
+    document.getElementById('cert-fecha-nacimiento')?.addEventListener('change', () => this._actualizarMinoria());
+    document.getElementById('btn-cert-terminos')?.addEventListener('click', () => this._abrirTerminos());
+    document.getElementById('btn-aceptar-terminos')?.addEventListener('click', () => this._aceptarTerminos());
     document.getElementById('btn-cert-cancelar-correccion')?.addEventListener('click', () => this._salirCorreccion());
     form?.addEventListener('submit', (event) => {
       event.preventDefault();
       this._enviar(form);
     });
+    this._actualizarMinoria();
+  },
+
+  /** HU01: el bloque del menor depende de la fecha de nacimiento, no de una casilla. */
+  _actualizarMinoria() {
+    const fecha = document.getElementById('cert-fecha-nacimiento')?.value || '';
+    const esMenor = esMenorDeEdad(fecha);
+    document.getElementById('cert-bloque-menor')?.classList.toggle('d-none', !esMenor);
+    this._marcarTerminos(esMenor && document.getElementById('cert-terminos-menor')?.value === 'si');
+  },
+
+  _marcarTerminos(aceptados) {
+    const campo = document.getElementById('cert-terminos-menor');
+    if (campo) campo.value = aceptados ? 'si' : '';
+    const estado = document.getElementById('cert-terminos-estado');
+    if (estado) {
+      estado.className = `small ${aceptados ? 'text-success-emphasis' : 'text-warning-emphasis'}`;
+      estado.innerHTML = `<i class="bi ${aceptados ? 'bi-check-circle-fill' : 'bi-exclamation-circle'} me-1" aria-hidden="true"></i>${
+        aceptados ? t().terminosAceptados : t().terminosPendientes}`;
+    }
+  },
+
+  _abrirTerminos() {
+    const modalEl = document.getElementById('modal-terminos-menor');
+    if (!modalEl || !window.bootstrap?.Modal) return;
+    window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  },
+
+  _aceptarTerminos() {
+    this._marcarTerminos(true);
+    const modalEl = document.getElementById('modal-terminos-menor');
+    if (modalEl && window.bootstrap?.Modal) window.bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    document.getElementById('btn-cert-terminos')?.focus();
+  },
+
+  /** Evita volver a escribir la fecha: se toma del último certificado que la tenga. */
+  _precargarFechaNacimiento() {
+    const campo = document.getElementById('cert-fecha-nacimiento');
+    if (!campo || campo.value) return;
+    const conFecha = this._certificados.find((c) => c.fecha_nacimiento);
+    if (!conFecha) return;
+    campo.value = conFecha.fecha_nacimiento;
+    this._actualizarMinoria();
+  },
+
+  _buildModalTerminos() {
+    return `
+      <div class="modal fade" id="modal-terminos-menor" tabindex="-1" aria-labelledby="modal-terminos-menor-titulo" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title h5" id="modal-terminos-menor-titulo">
+                <i class="bi bi-shield-check text-primary me-2" aria-hidden="true"></i>${t().terminosTitulo}
+              </h2>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${i18n.app.cancelar}"></button>
+            </div>
+            <div class="modal-body">
+              <p>${t().terminosIntro}</p>
+              ${t().terminosSecciones.map((sec) => `
+                <h3 class="h6 fw-700 mt-3">${sec.titulo}</h3>
+                <p class="small mb-2">${sec.texto}</p>`).join('')}
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${i18n.app.cancelar}</button>
+              <button type="button" class="btn btn-primary" id="btn-aceptar-terminos">
+                <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>${t().terminosAceptar}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   },
 
   async _enviar(form) {
@@ -324,8 +405,10 @@ const CertificadosView = {
   _salirCorreccion() {
     this._corrigiendo = null;
     document.getElementById('form-certificado')?.reset();
-    document.getElementById('cert-bloque-acudiente')?.classList.add('d-none');
-    document.getElementById('cert-es-menor')?.setAttribute('aria-expanded', 'false');
+    // Un input hidden no vuelve a vacío con reset(): se limpia a mano.
+    this._marcarTerminos(false);
+    this._precargarFechaNacimiento();
+    this._actualizarMinoria();
     document.getElementById('cert-consentimientos')?.classList.remove('d-none');
     const titulo = document.getElementById('cert-form-titulo-texto');
     if (titulo) titulo.textContent = t().cargarTitulo;
