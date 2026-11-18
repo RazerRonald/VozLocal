@@ -36,7 +36,8 @@ const fechaMs = (ts) => (ts?.toMillis ? ts.toMillis() : 0);
 const CertificadoModel = {
   /**
    * HU01: crea el certificado Pendiente y su archivo en un solo lote atómico.
-   * @param {Object} datos   Identidad, actividad, horas, archivo_* y consentimientos.
+   * @param {Object} datos   Identidad, fecha de nacimiento, actividad, horas,
+   *                         archivo_*, consentimiento y términos del menor.
    * @param {string[]} partes Trozos base64 del archivo.
    * @returns {Promise<string>} ID del certificado.
    */
@@ -45,6 +46,8 @@ const CertificadoModel = {
     const batch = writeBatch(db);
     batch.set(ref, {
       ...datos,
+      // HU01: constancia de cuándo el menor aceptó los términos (las reglas exigen request.time).
+      fecha_aceptacion_terminos: datos.terminos_menor_aceptados ? serverTimestamp() : null,
       estado:          ESTADOS_CERTIFICADO.PENDIENTE,
       horas_aprobadas: 0,
       motivo_rechazo:  null,

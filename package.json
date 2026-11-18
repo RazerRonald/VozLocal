@@ -4,6 +4,7 @@
   "scripts": {
     "test": "node --test tests/security/*.test.cjs",
     "test:integration": "node --test tests/integration/*.test.cjs",
+    "test:rules": "firebase emulators:exec --config firebase.test.json --only firestore --project demo-jal-audit \"node --test tests/integration/rules.test.cjs tests/integration/certificados.rules.test.cjs\"",
     "test:web": "node tests/web/regression.cjs",
     "dev": "node --env-file-if-exists=.env scripts/dev.cjs"
   },

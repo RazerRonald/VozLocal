@@ -71,6 +71,73 @@ export function partirEnTrozos(texto, tamano = CERTIFICADO_PARTE_CHARS) {
   return partes;
 }
 
+/** HU01: mayoría de edad en Colombia. */
+export const MAYORIA_EDAD = 18;
+
+const FORMATO_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Partes de una fecha 'AAAA-MM-DD' que existe en el calendario, o null.
+ * @param {string} texto
+ */
+function partesFecha(texto) {
+  const m = FORMATO_FECHA.exec(String(texto ?? ''));
+  if (!m) return null;
+  const [anio, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+  if (fecha.getUTCFullYear() !== anio || fecha.getUTCMonth() !== mes - 1 || fecha.getUTCDate() !== dia) return null;
+  return { anio, mes, dia };
+}
+
+/**
+ * ¿Ya se cumplieron `anios` años desde la fecha, contando el día de hoy?
+ * Usa el día UTC, igual que `request.time` en firestore.rules, para que el
+ * cliente y las reglas den siempre el mismo resultado. Un nacido un 29 de
+ * febrero cumple el 1 de marzo en los años no bisiestos.
+ */
+function cumplidosAnios({ anio, mes, dia }, anios, hoy) {
+  const [y, m, d] = [hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, hoy.getUTCDate()];
+  const objetivo = anio + anios;
+  return objetivo < y || (objetivo === y && (mes < m || (mes === m && dia <= d)));
+}
+
+/**
+ * HU01: fecha de nacimiento real, desde 1900 y no posterior a hoy.
+ * @param {string} texto 'AAAA-MM-DD'
+ * @param {Date} [hoy]
+ */
+export function fechaNacimientoValida(texto, hoy = new Date()) {
+  const partes = partesFecha(texto);
+  return Boolean(partes) && partes.anio >= 1900 && cumplidosAnios(partes, 0, hoy);
+}
+
+/**
+ * HU01: menor de edad según la fecha de nacimiento (false si la fecha no es válida).
+ * @param {string} texto 'AAAA-MM-DD'
+ * @param {Date} [hoy]
+ */
+export function esMenorDeEdad(texto, hoy = new Date()) {
+  if (!fechaNacimientoValida(texto, hoy)) return false;
+  return !cumplidosAnios(partesFecha(texto), MAYORIA_EDAD, hoy);
+}
+
+/**
+ * Edad cumplida en años, o null si la fecha no es válida.
+ * @param {string} texto 'AAAA-MM-DD'
+ * @param {Date} [hoy]
+ */
+export function edadEnAnios(texto, hoy = new Date()) {
+  if (!fechaNacimientoValida(texto, hoy)) return null;
+  const partes = partesFecha(texto);
+  const base = hoy.getUTCFullYear() - partes.anio;
+  return cumplidosAnios(partes, base, hoy) ? base : base - 1;
+}
+
+/** Fecha de hoy como 'AAAA-MM-DD' (día UTC), para el atributo max del campo. */
+export function hoyIso(hoy = new Date()) {
+  return hoy.toISOString().slice(0, 10);
+}
+
 /**
  * HU05: suma solo horas de certificados Aprobados; no recorta el acumulado real.
  * @param {Array<{estado: string, horas_aprobadas: number}>} certificados
