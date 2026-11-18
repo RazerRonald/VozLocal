@@ -138,6 +138,21 @@ const AdminView = {
             </button>
           </div>
           <div class="col-md-6 col-xl">
+            <a href="#/admin/certificados" class="btn w-100 p-4 text-start form-jal"
+               style="cursor:pointer;border:2px solid var(--color-border);transition:all .25s;"
+               id="btn-admin-certificados"
+               aria-label="${i18n.certificados.adminTitulo}">
+              <div class="d-flex align-items-center gap-3">
+                <div class="stat-icon stat-icon-success"><i class="bi bi-patch-check fs-4"></i></div>
+                <div>
+                  <div class="fw-700">${i18n.certificados.adminTitulo}</div>
+                  <div class="text-muted small">${i18n.certificados.accesoRapidoSub}</div>
+                </div>
+                <i class="bi bi-arrow-right ms-auto text-success"></i>
+              </div>
+            </a>
+          </div>
+          <div class="col-md-6 col-xl">
             <button class="btn w-100 p-4 text-start form-jal"
                     style="cursor:pointer;border:2px solid var(--color-border);transition:all .25s;"
                     id="btn-admin-usuarios"
@@ -953,7 +968,7 @@ const AdminView = {
           </td>
           <td class="text-end">
             <div class="d-flex gap-1 justify-content-end flex-wrap">
-              ${[ESTADOS_TRAMITE.PENDIENTE, ESTADOS_TRAMITE.APROBADO].includes(t.estado) ? `
+              ${t.estado === ESTADOS_TRAMITE.APROBADO ? `
                 <button class="btn btn-sm btn-jal-primary btn-vista-previa"
                         data-id="${this._esc(t.id)}"
                         aria-label="${i18n.admin.vistaPrevia}">
@@ -1305,8 +1320,10 @@ const AdminView = {
 
     if (tituloEl) tituloEl.textContent = i18n.admin.modalCartaTitulo;
     btnDescargar.innerHTML = `<i class="bi bi-download me-1"></i>${i18n.admin.descargarCarta}`;
-    btnExpedir.classList.add('d-none');
-    btnExpedir.disabled = true;
+    // El modal es compartido con la carta de finalización: se restaura el texto propio.
+    btnExpedir.innerHTML = `<i class="bi bi-check2-circle me-1"></i>${i18n.admin.marcarExpedida}`;
+    btnExpedir.classList.remove('d-none');
+    btnExpedir.disabled = false;
 
     const fechaCarta = new Date().toLocaleDateString('es-CO', {
       day: 'numeric', month: 'long', year: 'numeric',
@@ -1358,6 +1375,30 @@ const AdminView = {
         onSuccess: ({ blob, nombreArchivo }) => {
           this._descargarBlob(blob, nombreArchivo);
           Toast.exito(i18n.admin.descargadoOk);
+        },
+        onError: (msg) => Toast.error(msg),
+      });
+    });
+
+    // ─── Botón: Expedir (JAL-027 sube a Drive por estudiante; JAL-028 marca Expedida) ───
+    const newBtnExp = btnExpedir.cloneNode(true);
+    btnExpedir.parentNode.replaceChild(newBtnExp, btnExpedir);
+
+    newBtnExp.addEventListener('click', async () => {
+      await ArchivoController.expedirDocumento(tramite.id, tramite, {
+        onLoading: (v) => {
+          const prog = document.getElementById('modal-carta-progress');
+          if (prog) prog.classList.toggle('d-none', !v);
+          newBtnExp.disabled = v;
+          newBtnDesc.disabled = v;
+        },
+        onProgress: (msg) => {
+          const el = document.getElementById('modal-carta-progress-msg');
+          if (el) el.textContent = msg;
+        },
+        onSuccess: () => {
+          Toast.exito(i18n.admin.expedidoOk);
+          bsModal.hide();
         },
         onError: (msg) => Toast.error(msg),
       });

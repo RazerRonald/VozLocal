@@ -24,6 +24,15 @@ export const COL_DOCUMENTOS_CARTAS = 'info_carta_documentos';
 /** Solicitudes publicas para crear accesos de estudiantes. */
 export const COL_SOLICITUDES_ACCESO = 'solicitudes_acceso';
 
+/** Certificados de servicio social (E04 / SC-001). */
+export const COL_CERTIFICADOS = 'certificados';
+
+/** Trozos base64 privados del archivo de cada certificado. Dueño o Edil. */
+export const COL_CERTIFICADOS_ARCHIVOS = 'certificados_archivos';
+
+/** Constancias de solicitudes de eliminacion de datos (SC001-HU06). */
+export const COL_SOLICITUDES_ELIMINACION = 'solicitudes_eliminacion';
+
 /**
  * Roles del sistema.
  * Deben coincidir exactamente con el valor del campo `rol` en Firestore.
@@ -56,3 +65,13 @@ export const ESTADOS_TRAMITE = {
   RECHAZADO: 'Rechazado',
   EXPEDIDA:  'Expedida',
 };
+
+/** Estados de un certificado de servicio social. */
+export const ESTADOS_CERTIFICADO = {
+  PENDIENTE: 'Pendiente',
+  APROBADO:  'Aprobado',
+  RECHAZADO: 'Rechazado',
+};
+
+/** Meta de horas de servicio social para la beca (SC001-HU05). */
+export const META_HORAS_SERVICIO = 80;

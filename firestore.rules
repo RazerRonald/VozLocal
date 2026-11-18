@@ -437,6 +437,15 @@ service cloud.firestore {
         || estado == 'Expedida';
     }
 
+    // JAL-023: la carta solo se expide si el Edil la aprobó antes; no se saltan estados.
+    function transicionEstadoTramiteValida() {
+      let antes = resource.data.estado;
+      let despues = request.resource.data.estado;
+      return antes == despues
+        || (antes == 'Pendiente' && (despues == 'Aprobado' || despues == 'Rechazado'))
+        || (antes == 'Aprobado' && despues == 'Expedida');
+    }
+
     function estadoFinalizacionValido(data) {
       let estado = data.get('finalizacion_estado', null);
       return estado == null
@@ -506,6 +515,7 @@ service cloud.firestore {
         && solicitudBaseNoCambia()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(camposEditablesSolicitudEdil())
         && estadoTramiteValido(request.resource.data.estado)
+        && transicionEstadoTramiteValida()
         && estadoFinalizacionValido(request.resource.data)
         && stringOpcional(request.resource.data, 'sugerencia_correccion', 1000)
         && stringOpcional(request.resource.data, 'finalizacion_sugerencia_correccion', 1000)
@@ -553,6 +563,169 @@ service cloud.firestore {
         && data.actualizadoEn == request.time
         && data.actualizadoPor == request.auth.uid
         && (request.auth.uid != userId || data.rol == 'edil');
+    }
+
+    // ─── E04 · Certificados de servicio social (SC-001) ───────────────
+    // El archivo vive en trozos base64 dentro de certificados_archivos: no hay
+    // URL pública, solo lecturas autenticadas del dueño o de un Edil (HU06).
+
+    function camposCertificado() {
+      return [
+        'uid_estudiante', 'nombre_estudiante', 'numero_documento',
+        'actividad', 'entidad', 'horas_reportadas', 'horas_aprobadas',
+        'estado', 'motivo_rechazo', 'revertido', 'version',
+        'archivo_nombre', 'archivo_tipo', 'archivo_tamano', 'archivo_partes',
+        'es_menor', 'consentimiento_joven', 'consentimiento_acudiente', 'acudiente_nombre',
+        'fecha_carga', 'fecha_revision', 'uid_revisor'
+      ];
+    }
+
+    function perfilEstudianteCoincide(data) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && perfilSolicitante().rol == 'estudiante'
+        && data.nombre_estudiante == nombreCompletoPerfil(perfilSolicitante())
+        && data.numero_documento == perfilSolicitante().numero_documento;
+    }
+
+    function datosCertificadoValidos(data) {
+      return stringNoVacio(data.actividad, 200)
+        && stringNoVacio(data.entidad, 200)
+        && data.horas_reportadas is number
+        && data.horas_reportadas > 0
+        && data.horas_reportadas <= 1000;
+    }
+
+    // HU01: PDF/JPG/PNG no vacío de hasta 5 MB exactos (5 * 1024 * 1024 bytes).
+    function archivoCertificadoValido(data) {
+      return stringNoVacio(data.archivo_nombre, 200)
+        && data.archivo_tipo in ['application/pdf', 'image/jpeg', 'image/png']
+        && data.archivo_tamano is int
+        && data.archivo_tamano > 0
+        && data.archivo_tamano <= 5242880
+        && data.archivo_partes is int
+        && data.archivo_partes >= 1
+        && data.archivo_partes <= 10;
+    }
+
+    // HU01: el consentimiento del joven no sustituye el del acudiente.
+    function consentimientosValidos(data) {
+      return data.consentimiento_joven == true
+        && data.es_menor is bool
+        && data.consentimiento_acudiente is bool
+        && stringOpcional(data, 'acudiente_nombre', 120)
+        && (data.es_menor == false
+          || (data.consentimiento_acudiente == true && stringNoVacio(data.acudiente_nombre, 120)));
+    }
+
+    // El documento y su archivo se escriben en el mismo lote: si falta un trozo
+    // no queda un certificado Pendiente sin archivo (HU01 criterio 4).
+    function partesCertificadoPresentes(certId, data) {
+      let prefijo = certId + '_v' + string(data.version) + '_';
+      return existsAfter(/databases/$(database)/documents/certificados_archivos/$(prefijo + '0'))
+        && existsAfter(/databases/$(database)/documents/certificados_archivos/$(prefijo + string(data.archivo_partes - 1)));
+    }
+
+    function certificadoCreacionValida(certId) {
+      let data = request.resource.data;
+      return autenticado()
+        && data.keys().hasOnly(camposCertificado())
+        && data.keys().hasAll(camposCertificado())
+        && data.uid_estudiante == request.auth.uid
+        && perfilEstudianteCoincide(data)
+        && datosCertificadoValidos(data)
+        && archivoCertificadoValido(data)
+        && consentimientosValidos(data)
+        && data.estado == 'Pendiente'
+        && data.horas_aprobadas == 0
+        && data.motivo_rechazo == null
+        && data.revertido == false
+        && data.version == 1
+        && data.fecha_carga == request.time
+        && data.fecha_revision == null
+        && data.uid_revisor == null
+        && partesCertificadoPresentes(certId, data);
+    }
+
+    // HU02 y HU04: aprobar/rechazar un Pendiente o revertir un Aprobado.
+    // Exigir el estado previo hace idempotente la reversión ante reintentos.
+    function certificadoRevisionEdilValida() {
+      let antes = resource.data;
+      let despues = request.resource.data;
+      let cambios = despues.diff(antes).affectedKeys();
+      return esEdil()
+        && despues.fecha_revision == request.time
+        && despues.uid_revisor == request.auth.uid
+        && (
+          (antes.estado == 'Pendiente' && despues.estado == 'Aprobado'
+            && cambios.hasOnly(['estado', 'horas_aprobadas', 'fecha_revision', 'uid_revisor'])
+            && despues.horas_aprobadas is number
+            && despues.horas_aprobadas > 0
+            && despues.horas_aprobadas <= antes.horas_reportadas)
+          || (antes.estado == 'Pendiente' && despues.estado == 'Rechazado'
+            && cambios.hasOnly(['estado', 'motivo_rechazo', 'fecha_revision', 'uid_revisor'])
+            && stringNoVacio(despues.motivo_rechazo, 1000))
+          || (antes.estado == 'Aprobado' && despues.estado == 'Rechazado'
+            && cambios.hasOnly(['estado', 'horas_aprobadas', 'motivo_rechazo', 'revertido', 'fecha_revision', 'uid_revisor'])
+            && despues.horas_aprobadas == 0
+            && despues.revertido == true
+            && stringNoVacio(despues.motivo_rechazo, 1000))
+        );
+    }
+
+    // HU03: solo el dueño reenvía un Rechazado; vuelve a Pendiente con 0 horas.
+    function certificadoCorreccionValida(certId) {
+      let antes = resource.data;
+      let despues = request.resource.data;
+      return autenticado()
+        && antes.uid_estudiante == request.auth.uid
+        && antes.estado == 'Rechazado'
+        && despues.estado == 'Pendiente'
+        && despues.diff(antes).affectedKeys().hasOnly([
+          'estado', 'version', 'actividad', 'entidad', 'horas_reportadas',
+          'archivo_nombre', 'archivo_tipo', 'archivo_tamano', 'archivo_partes',
+          'motivo_rechazo', 'revertido', 'fecha_carga', 'fecha_revision', 'uid_revisor'
+        ])
+        && despues.version == antes.version + 1
+        && datosCertificadoValidos(despues)
+        && archivoCertificadoValido(despues)
+        && despues.horas_aprobadas == 0
+        && despues.motivo_rechazo == null
+        && despues.revertido == false
+        && despues.fecha_carga == request.time
+        && despues.fecha_revision == null
+        && despues.uid_revisor == null
+        && partesCertificadoPresentes(certId, despues);
+    }
+
+    function parteCertificadoValida(parteId) {
+      let data = request.resource.data;
+      let cert = getAfter(/databases/$(database)/documents/certificados/$(data.certificado_id)).data;
+      return autenticado()
+        && data.keys().hasOnly(['uid_estudiante', 'certificado_id', 'version', 'parte', 'datos'])
+        && data.keys().hasAll(['uid_estudiante', 'certificado_id', 'version', 'parte', 'datos'])
+        && data.uid_estudiante == request.auth.uid
+        && data.certificado_id is string
+        && data.version is int
+        && data.parte is int
+        && data.parte >= 0
+        && parteId == data.certificado_id + '_v' + string(data.version) + '_' + string(data.parte)
+        && stringNoVacio(data.datos, 700000)
+        && cert.uid_estudiante == request.auth.uid
+        && cert.estado == 'Pendiente'
+        && cert.version == data.version
+        && data.parte < cert.archivo_partes;
+    }
+
+    function solicitudEliminacionValida() {
+      let data = request.resource.data;
+      return autenticado()
+        && data.keys().hasOnly(['uid_estudiante', 'nombre_estudiante', 'numero_documento', 'motivo', 'estado', 'fecha_solicitud'])
+        && data.keys().hasAll(['uid_estudiante', 'nombre_estudiante', 'numero_documento', 'motivo', 'estado', 'fecha_solicitud'])
+        && data.uid_estudiante == request.auth.uid
+        && perfilEstudianteCoincide(data)
+        && stringOpcional(data, 'motivo', 500)
+        && data.estado == 'Recibida'
+        && data.fecha_solicitud == request.time;
     }
 
     match /noticias/{noticiaId} {
@@ -641,6 +814,29 @@ service cloud.firestore {
 
     match /info_carta_documentos/{solicitudId} {
       allow read, write: if esEdil();
+    }
+
+    match /certificados/{certId} {
+      allow get, list: if autenticado()
+        && (esEdil() || resource.data.uid_estudiante == request.auth.uid);
+      allow create: if certificadoCreacionValida(certId);
+      allow update: if certificadoRevisionEdilValida() || certificadoCorreccionValida(certId);
+      allow delete: if false; // HU06: el borrado se atiende por solicitud, no desde el cliente.
+    }
+
+    match /certificados_archivos/{parteId} {
+      allow get: if autenticado()
+        && (esEdil() || resource.data.uid_estudiante == request.auth.uid);
+      allow list: if false; // Se lee por ID conocido; evita enumerar archivos ajenos.
+      allow create: if parteCertificadoValida(parteId);
+      allow update, delete: if false;
+    }
+
+    match /solicitudes_eliminacion/{solicitudId} {
+      allow get, list: if autenticado()
+        && (esEdil() || resource.data.uid_estudiante == request.auth.uid);
+      allow create: if solicitudEliminacionValida();
+      allow update, delete: if false; // Procedimiento institucional aún sin definir.
     }
 
     match /solicitudes_acceso/{solicitudId} {

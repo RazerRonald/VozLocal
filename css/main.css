@@ -235,6 +235,18 @@ img {
   }
 }
 
+/* Con Trámites y Certificados el menú del estudiante no cabe en una fila
+   entre 992 y 1279 px: se compactan los enlaces en ese rango. */
+@media (min-width: 992px) and (max-width: 1279.98px) {
+  .navbar-jal .nav-link {
+    padding: 0.5rem 0.65rem !important;
+  }
+
+  .navbar-jal .nav-link > .bi {
+    display: none;
+  }
+}
+
 /* Menú móvil como barra lateral derecha (offcanvas) con fondo sólido.
    En ≥992px Bootstrap (offcanvas-lg) lo integra como fila normal de la
    navbar y estas reglas no aplican. */
