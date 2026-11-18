@@ -10,6 +10,7 @@ import CertificadoController from '../controllers/CertificadoController.js';
 import Toast                 from '../components/Toast.js';
 import { i18n }              from '../config/i18n.js';
 import { ESTADOS_CERTIFICADO } from '../config/collections.js';
+import { esMenorDeEdad, edadEnAnios } from '../utils/certificados.js';
 
 const t = () => i18n.certificados;
 
@@ -174,7 +175,8 @@ const AdminCertificadosView = {
       <tr>
         <td>
           <div class="fw-600">${this._esc(c.nombre_estudiante)}</div>
-          <small class="text-muted">${this._esc(c.numero_documento)}${c.es_menor ? ` · Menor (acudiente: ${this._esc(c.acudiente_nombre)})` : ''}</small>
+          <small class="text-muted">${this._esc(c.numero_documento)}</small>
+          ${this._buildEdad(c)}
         </td>
         <td>
           <div>${this._esc(c.actividad)}</div>
@@ -265,6 +267,33 @@ const AdminCertificadosView = {
     } finally {
       btn.disabled = false;
     }
+  },
+
+  /**
+   * HU01: el edil ve la fecha de nacimiento y, si el joven es menor de edad hoy,
+   * el tutor, la aceptación de términos y el recordatorio para la entrega.
+   * Los certificados anteriores a este cambio no tienen fecha: se usa es_menor.
+   */
+  _buildEdad(c) {
+    const edad = c.fecha_nacimiento ? edadEnAnios(c.fecha_nacimiento) : null;
+    const esMenor = c.fecha_nacimiento ? esMenorDeEdad(c.fecha_nacimiento) : Boolean(c.es_menor);
+    const nacimiento = c.fecha_nacimiento ? `
+      <div class="small text-muted">${t().nacimiento} ${this._formatFechaIso(c.fecha_nacimiento)}${
+        edad !== null ? ` · ${this._esc(t().edadAnios.replace('{n}', edad))}` : ''}</div>` : '';
+    if (!esMenor) return nacimiento;
+    return `${nacimiento}
+      <div class="small mt-1">
+        <span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-person-exclamation me-1" aria-hidden="true"></i>${t().menorEdad}</span>
+        ${c.acudiente_nombre ? `<span class="text-muted">${t().tutor}: ${this._esc(c.acudiente_nombre)}</span>` : ''}
+      </div>
+      ${c.fecha_aceptacion_terminos ? `<div class="small text-muted">${this._esc(t().terminosAceptadosEl.replace('{fecha}', this._formatFecha(c.fecha_aceptacion_terminos)))}</div>` : ''}
+      <div class="small text-warning-emphasis">${t().recordatorioTutor}</div>`;
+  },
+
+  /** 'AAAA-MM-DD' sin pasar por la zona horaria del navegador. */
+  _formatFechaIso(texto) {
+    const [anio, mes, dia] = String(texto).split('-');
+    return anio && mes && dia ? `${dia}/${mes}/${anio}` : this._esc(texto);
   },
 
   _buildEstado(estado) {

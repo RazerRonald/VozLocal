@@ -1,4 +1,5 @@
 """PR 1 · Ronald Briceño — JAL-020 a JAL-024 y SC001-HU01, SC001-HU02.
+(HU01: minoría de edad por fecha de nacimiento y términos del menor.)
 
 Ejecutar desde la raíz del repo:  python -m unittest discover -s tests/unittest -v
 """
@@ -20,7 +21,10 @@ SESION = """A.getSesion = () => ({ uid: 'joven-1', rol: 'estudiante', nombre: 'A
   primer_apellido: 'Diaz', segundo_apellido: 'Ruiz', tipo_documento: 'CC', numero_documento: '123', ciudad_documento: 'Medellin' });"""
 ESPIA = """const llamadas = []; const r = {};
 const cb = { onLoading() {}, onSuccess() { r.ok = true; }, onError(m) { r.error = m; } };"""
-FORM = "const form = { actividad: 'Apoyo biblioteca', entidad: 'JAL', horas_reportadas: '20', consentimiento_joven: 'on' };"
+FORM = """const form = { actividad: 'Apoyo biblioteca', entidad: 'JAL', horas_reportadas: '20', consentimiento_joven: 'on',
+  fecha_nacimiento: '1990-05-10' };
+const haceAnios = (n, dias = 0) => { const d = new Date(); d.setUTCFullYear(d.getUTCFullYear() - n);
+  d.setUTCDate(d.getUTCDate() + dias); return d.toISOString().slice(0, 10); };"""
 
 
 class ValidacionArchivoHU01(unittest.TestCase):
@@ -77,13 +81,53 @@ class CargaCertificadoHU01(unittest.TestCase):
         self.assertEqual(res['r']['error'], res['textos']['errorConsentimientoJoven'])
         self.assertEqual(res['llamadas'], [])
 
-    def test_menor_sin_acudiente_se_bloquea_aunque_el_joven_consienta(self):
-        res = self.cargar("form.es_menor = 'on';")
-        self.assertEqual(res['r']['error'], res['textos']['errorConsentimientoAcudiente'])
+    def test_menor_se_detecta_por_la_fecha_y_exige_tutor_y_terminos(self):
+        menor = "form.fecha_nacimiento = haceAnios(15);"
+        res = self.cargar(menor)
+        self.assertEqual(res['r']['error'], res['textos']['errorTutorNombre'])
         self.assertEqual(res['llamadas'], [])
-        res = self.cargar("form.es_menor = 'on'; form.acudiente_nombre = 'Rosa Ruiz'; form.consentimiento_acudiente = 'on';")
+        res = self.cargar(menor + " form.acudiente_nombre = 'Rosa Ruiz';")
+        self.assertEqual(res['r']['error'], res['textos']['errorTerminosMenor'])
+        self.assertEqual(res['llamadas'], [])
+        res = self.cargar(menor + " form.acudiente_nombre = 'Rosa Ruiz'; form.terminos_menor_aceptados = 'si';")
         self.assertTrue(res['r'].get('ok'))
-        self.assertEqual(res['llamadas'][0]['datos']['acudiente_nombre'], 'Rosa Ruiz')
+        datos = res['llamadas'][0]['datos']
+        self.assertTrue(datos['es_menor'])
+        self.assertTrue(datos['terminos_menor_aceptados'])
+        self.assertEqual(datos['acudiente_nombre'], 'Rosa Ruiz')
+
+    def test_el_dia_que_cumple_18_ya_no_es_menor(self):
+        res = self.cargar("form.fecha_nacimiento = haceAnios(18);")
+        self.assertTrue(res['r'].get('ok'))
+        self.assertFalse(res['llamadas'][0]['datos']['es_menor'])
+        res = self.cargar("form.fecha_nacimiento = haceAnios(18, 1);")
+        self.assertEqual(res['r']['error'], res['textos']['errorTutorNombre'])
+
+    def test_un_mayor_no_puede_marcarse_menor_ni_guardar_datos_de_tutor(self):
+        res = self.cargar("form.es_menor = 'on'; form.acudiente_nombre = 'X'; form.terminos_menor_aceptados = 'si';")
+        self.assertTrue(res['r'].get('ok'))
+        datos = res['llamadas'][0]['datos']
+        self.assertEqual(datos['fecha_nacimiento'], '1990-05-10')
+        self.assertFalse(datos['es_menor'])
+        self.assertFalse(datos['terminos_menor_aceptados'])
+        self.assertIsNone(datos['acudiente_nombre'])
+
+    def test_fecha_de_nacimiento_faltante_invalida_o_futura_no_se_guarda(self):
+        for ajuste in ("delete form.fecha_nacimiento;", "form.fecha_nacimiento = '2007-02-30';",
+                       "form.fecha_nacimiento = haceAnios(-1);"):
+            with self.subTest(ajuste=ajuste):
+                res = self.cargar(ajuste)
+                self.assertEqual(res['r']['error'], res['textos']['errorFechaNacimiento'])
+                self.assertEqual(res['llamadas'], [])
+
+    def test_el_formulario_pide_fecha_y_terminos_en_vez_de_casilla_de_menor(self):
+        vista = leer('js/views/CertificadosView.js')
+        self.assertIn('type="date" id="cert-fecha-nacimiento" name="fecha_nacimiento"', vista)
+        self.assertIn('name="terminos_menor_aceptados"', vista)
+        self.assertIn('id="modal-terminos-menor"', vista)
+        self.assertNotIn('name="es_menor"', vista)
+        reglas = leer('firestore.rules')
+        self.assertIn("data.es_menor == !cumplidosAnios(data.fecha_nacimiento, 18)", reglas)
 
     def test_archivo_invalido_no_escribe_nada(self):
         res = self.cargar(archivo="new File([new TextEncoder().encode('texto')], 'notas.txt')")

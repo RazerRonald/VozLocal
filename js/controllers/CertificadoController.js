@@ -16,6 +16,8 @@ import {
   base64ABytes,
   partirEnTrozos,
   calcularAvance,
+  fechaNacimientoValida,
+  esMenorDeEdad,
 } from '../utils/certificados.js';
 
 const t = () => i18n.certificados;
@@ -175,15 +177,21 @@ const CertificadoController = {
 
   // ─── Validación ──────────────────────────────────────────────────────
 
+  /**
+   * HU01: la minoría de edad se calcula con la fecha de nacimiento (no es una
+   * casilla que el joven pueda desmarcar); las reglas repiten el cálculo.
+   */
   _datosFormulario(formData) {
-    const esMenor = formData.es_menor === 'on';
+    const fechaNacimiento = String(formData.fecha_nacimiento ?? '').trim();
+    const esMenor = esMenorDeEdad(fechaNacimiento);
     return {
       actividad:                this._texto(formData.actividad, 200),
       entidad:                  this._texto(formData.entidad, 200),
       horas_reportadas:         Number(formData.horas_reportadas),
+      fecha_nacimiento:         fechaNacimiento,
       es_menor:                 esMenor,
       consentimiento_joven:     formData.consentimiento_joven === 'on',
-      consentimiento_acudiente: esMenor && formData.consentimiento_acudiente === 'on',
+      terminos_menor_aceptados: esMenor && formData.terminos_menor_aceptados === 'si',
       acudiente_nombre:         esMenor ? (this._texto(formData.acudiente_nombre, 120) || null) : null,
     };
   },
@@ -195,8 +203,10 @@ const CertificadoController = {
   },
 
   _validarConsentimientos(datos) {
+    if (!fechaNacimientoValida(datos.fecha_nacimiento)) return t().errorFechaNacimiento;
     if (!datos.consentimiento_joven) return t().errorConsentimientoJoven;
-    if (datos.es_menor && (!datos.consentimiento_acudiente || !datos.acudiente_nombre)) return t().errorConsentimientoAcudiente;
+    if (datos.es_menor && !datos.acudiente_nombre) return t().errorTutorNombre;
+    if (datos.es_menor && !datos.terminos_menor_aceptados) return t().errorTerminosMenor;
     return null;
   },
 
