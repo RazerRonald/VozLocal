@@ -12,6 +12,9 @@ node_modules/
 
 # Generated reports and browser artifacts
 reports/
+coverage/
+htmlcov/
+.coverage
 playwright-report/
 test-results/
 

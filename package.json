@@ -4,6 +4,8 @@
   "scripts": {
     "test": "node --test tests/security/*.test.cjs",
     "test:integration": "node --test tests/integration/*.test.cjs",
+    "coverage:unittest": "python -m coverage run -m unittest discover -s tests/unittest && python -m coverage report -m",
+    "coverage:js": "c8 --all --src js --include \"js/**/*.js\" --exclude \"js/vendor/**\" --reporter=text --reporter=text-summary python -m unittest discover -s tests/unittest",
     "test:rules": "firebase emulators:exec --config firebase.test.json --only firestore --project demo-jal-audit \"node --test tests/integration/rules.test.cjs tests/integration/certificados.rules.test.cjs\"",
     "test:web": "node tests/web/regression.cjs",
     "dev": "node --env-file-if-exists=.env scripts/dev.cjs"
@@ -16,6 +18,7 @@
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.2",
+    "c8": "12.0.0",
     "firebase-tools": "15.29.0",
     "playwright": "1.63.0"
   },
