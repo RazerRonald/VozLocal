@@ -147,11 +147,8 @@ export const DRIVE_CONFIG = {
    */
   CLIENT_ID: '1023557170353-5kdd29qn0kgj2ncjnsjbvpuns38o60sv.apps.googleusercontent.com',
 
-  /**
-   * API Key pública de Google Cloud (solo para llamadas autenticadas con OAuth).
-   * Reemplazar con tu clave real.
-   */
-  API_KEY: 'AIzaSyB8kkNqzzjwyTYsIWnk_mOtwaZ50EV8Iis',
+  // Sin API key: Drive se usa solo con OAuth (CLIENT_ID + token del usuario). La clave que
+  // estaba aquí no se usaba y SonarCloud la marcó como secreto expuesto (S6334).
 
   /**
    * Scopes de OAuth requeridos para subir y gestionar archivos en Drive.
