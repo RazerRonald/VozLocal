@@ -13,7 +13,7 @@ import {
 } from '../config/collections.js';
 import { i18n } from '../config/i18n.js';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 const SolicitudAccesoController = {
   /** Registra una solicitud publica para unicamente el rol estudiante. */

@@ -7,7 +7,7 @@ function profile(input = {}, uid, publicRequest = false) {
     tipo_documento: clean('tipo_documento').toUpperCase(), numero_documento: clean('numero_documento').replace(/\s/g, ''),
     ciudad_documento: clean('ciudad_documento'), rol: publicRequest ? 'estudiante' : input.rol };
   if (Object.entries(result).some(([key, value]) => key !== 'uid' && !value)
-    || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result.email) || result.email.length > 180
+    || !/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(result.email) || result.email.length > 180
     || ['nombre', 'primer_apellido', 'segundo_apellido', 'ciudad_documento'].some(key => result[key].length > 80)
     || !['CC', 'CE', 'PPT', 'PA'].includes(result.tipo_documento)
     || result.numero_documento.length < (publicRequest ? 6 : 4) || result.numero_documento.length > 30

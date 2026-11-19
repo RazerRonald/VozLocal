@@ -8,6 +8,7 @@ import SolicitudAccesoController from '../controllers/SolicitudAccesoController.
 import Toast from '../components/Toast.js';
 import { i18n } from '../config/i18n.js';
 import { ESTADOS_SOLICITUD_ACCESO } from '../config/collections.js';
+import { sinEsperar } from '../utils/promesas.js';
 
 const AdminSolicitudesAccesoView = {
   _unsub: null,
@@ -152,7 +153,7 @@ const AdminSolicitudesAccesoView = {
 
       if (button.classList.contains('btn-aprobar-acceso')) this._confirmarAprobacion(solicitud);
       if (button.classList.contains('btn-rechazar-acceso')) this._confirmarRechazo(solicitud);
-      if (button.classList.contains('btn-reenviar-acceso')) this._reenviarCorreo(solicitud, button);
+      if (button.classList.contains('btn-reenviar-acceso')) sinEsperar(this._reenviarCorreo(solicitud, button), 'AdminSolicitudesAccesoView._reenviarCorreo');
       if (button.classList.contains('btn-gmail-acceso')) this._abrirGmail(solicitud);
     });
   },

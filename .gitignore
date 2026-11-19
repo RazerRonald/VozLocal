@@ -38,3 +38,6 @@ Thumbs.db
 # Excel temporales y respaldos
 *.backup.xlsx
 ~$*.xlsx
+
+# Archivos de trabajo del analizador de SonarCloud
+.scannerwork/

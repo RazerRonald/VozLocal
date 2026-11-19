@@ -34,8 +34,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const envFile = join(__dirname, '.env');
 if (existsSync(envFile)) {
   for (const linea of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
-    const m = linea.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
-    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2];
+    const m = linea.match(/^\s*([A-Za-z_]\w*)\s*=(.*)$/);
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].trim();
   }
 }
 const REPO_ROOT = resolve(__dirname, '..', '..');
@@ -81,7 +81,9 @@ const GRUPOS = [
 const esperar = (ms) => new Promise((res) => setTimeout(res, ms));
 
 function slug(ruta) {
-  return ruta.replace(/^#\//, '').replace(/[/:]+/g, '-').replace(/-+$/, '') || 'raiz';
+  let nombre = ruta.replace(/^#\//, '').replace(/[/:]+/g, '-');
+  while (nombre.endsWith('-')) nombre = nombre.slice(0, -1); // sin regex: evita retroceso (S8786)
+  return nombre || 'raiz';
 }
 
 /** Auditoria de layout ejecutada dentro de la pagina. */

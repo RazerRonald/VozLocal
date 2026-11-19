@@ -10,7 +10,7 @@ export async function resolve(specifier, context, nextResolve) {
   const fuente = readFileSync(fileURLToPath(context.parentURL), 'utf8');
   const clausula = new RegExp(`import\\s*\\{([^}]*)\\}\\s*from\\s*['"]${escapar(specifier)}['"]`).exec(fuente);
   const nombres = clausula
-    ? clausula[1].split(',').map((n) => n.trim().split(/\s+as\s+/)[0]).filter(Boolean)
+    ? clausula[1].split(',').map((n) => n.trim().split(/\s/)[0]).filter(Boolean)
     : [];
   return { url: `simulado:${encodeURIComponent(nombres.join(','))}`, shortCircuit: true };
 }
