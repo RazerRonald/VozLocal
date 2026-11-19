@@ -1,9 +1,11 @@
 // js/utils/promesas.js: tareas asíncronas lanzadas sin esperar (eventos del DOM, temporizadores).
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 
-const util = import('data:text/javascript;base64,' + fs.readFileSync('js/utils/promesas.js').toString('base64'));
+// Se importa el archivo real (no un data: URL) para que c8 asocie la cobertura a js/utils/promesas.js.
+const util = import(pathToFileURL(path.resolve('js/utils/promesas.js')).href);
 
 test('sinEsperar registra el error de una promesa rechazada con su contexto', async () => {
   const { sinEsperar } = await util;
