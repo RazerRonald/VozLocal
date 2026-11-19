@@ -22,6 +22,7 @@ import AdminCertificadosView from './views/AdminCertificadosView.js';
 
 import { ROLES }        from './config/collections.js';
 import { i18n }         from './config/i18n.js';
+import { sinEsperar } from './utils/promesas.js';
 
 function escHtml(str) {
   return String(str ?? '')
@@ -161,7 +162,7 @@ function manejarCambioVisibilidad() {
 
   const tiempoInactivo = Date.now() - ultimoRegistroActividad;
   if (tiempoInactivo >= INACTIVIDAD_LIMITE_MS) {
-    cerrarSesionPorInactividad();
+    sinEsperar(cerrarSesionPorInactividad(), 'app.verificarInactividad');
     return;
   }
 

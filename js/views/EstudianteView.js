@@ -10,6 +10,7 @@ import AuthModel           from '../models/AuthModel.js';
 import Toast               from '../components/Toast.js';
 import { i18n }            from '../config/i18n.js';
 import { ESTADOS_TRAMITE } from '../config/collections.js';
+import { sinEsperar } from '../utils/promesas.js';
 
 const EstudianteView = {
   /**
@@ -243,7 +244,7 @@ const EstudianteView = {
           },
           onSuccess: () => {
             Toast.exito(i18n.tramite.finalizacionSolicitadaOk);
-            this.renderHistorial();
+            sinEsperar(this.renderHistorial(), 'EstudianteView.renderHistorial');
           },
           onError: (msg) => Toast.error(msg),
         });
@@ -555,7 +556,7 @@ const EstudianteView = {
 
     form?.addEventListener('submit', (e) => {
       e.preventDefault();
-      this._handleEnviar(form);
+      sinEsperar(this._handleEnviar(form), 'EstudianteView._handleEnviar');
     });
   },
 
