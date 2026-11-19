@@ -11,6 +11,7 @@ import Toast                 from '../components/Toast.js';
 import { i18n }              from '../config/i18n.js';
 import { ESTADOS_CERTIFICADO } from '../config/collections.js';
 import { esMenorDeEdad, edadEnAnios } from '../utils/certificados.js';
+import { sinEsperar } from '../utils/promesas.js';
 
 const t = () => i18n.certificados;
 
@@ -120,7 +121,7 @@ const AdminCertificadosView = {
       const btn = event.target.closest('button[data-id]');
       const cert = btn && this._certificados.find((c) => c.id === btn.dataset.id);
       if (!cert || this._busy) return;
-      if (btn.classList.contains('btn-cert-ver')) this._ver(cert, btn);
+      if (btn.classList.contains('btn-cert-ver')) sinEsperar(this._ver(cert, btn), 'AdminCertificadosView._ver');
       if (btn.classList.contains('btn-cert-aprobar')) this._abrirRevision(cert, 'aprobar');
       if (btn.classList.contains('btn-cert-rechazar')) this._abrirRevision(cert, 'rechazar');
       if (btn.classList.contains('btn-cert-revertir')) this._abrirRevision(cert, 'revertir');
@@ -239,10 +240,10 @@ const AdminCertificadosView = {
       const valor = document.getElementById(accion === 'aprobar' ? 'revision-horas' : 'revision-motivo')?.value;
       CertificadoController[accion](cert, valor, {
         onLoading: (cargando) => { this._busy = cargando; boton.disabled = cargando; },
-        onSuccess: () => { modal.hide(); Toast.exito(t().revisadoOk); this._cargar(); },
+        onSuccess: () => { modal.hide(); Toast.exito(t().revisadoOk); sinEsperar(this._cargar(), 'AdminCertificadosView._cargar'); },
         onError: (msg) => {
           Toast.error(msg);
-          if (msg === t().errorEstadoCambiado) { modal.hide(); this._cargar(); }
+          if (msg === t().errorEstadoCambiado) { modal.hide(); sinEsperar(this._cargar(), 'AdminCertificadosView._cargar'); }
         },
       });
     };

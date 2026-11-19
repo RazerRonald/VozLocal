@@ -87,7 +87,7 @@ const AuthModel = {
     const password = String(datos?.password || '');
     await this._asegurarDocumentoDisponible(perfilBase.numero_documento);
 
-    const appName = `admin-create-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const appName = `admin-create-${crypto.randomUUID()}`; // nombre único de la app secundaria de Firebase
     const secondaryApp = initializeApp(firebaseConfig, appName);
     const secondaryAuth = getAuth(secondaryApp);
     await setPersistence(secondaryAuth, inMemoryPersistence);

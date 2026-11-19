@@ -11,6 +11,7 @@ import Toast                 from '../components/Toast.js';
 import { i18n }              from '../config/i18n.js';
 import { ESTADOS_CERTIFICADO } from '../config/collections.js';
 import { esMenorDeEdad, hoyIso } from '../utils/certificados.js';
+import { sinEsperar } from '../utils/promesas.js';
 
 const t = () => i18n.certificados;
 
@@ -164,7 +165,7 @@ const CertificadosView = {
       const btn = event.target.closest('button[data-id]');
       const cert = btn && this._certificados.find((c) => c.id === btn.dataset.id);
       if (!cert) return;
-      if (btn.classList.contains('btn-cert-ver')) this._descargar(cert, btn);
+      if (btn.classList.contains('btn-cert-ver')) sinEsperar(this._descargar(cert, btn), 'CertificadosView._descargar');
       if (btn.classList.contains('btn-cert-corregir')) this._iniciarCorreccion(cert);
     };
   },
@@ -207,16 +208,16 @@ const CertificadosView = {
     document.getElementById('btn-cert-eliminacion-cancelar')?.addEventListener('click', () => this._mostrarBotonEliminacion());
     confirmar?.addEventListener('click', () => {
       const motivo = document.getElementById('cert-eliminacion-motivo');
-      CertificadoController.solicitarEliminacion(motivo?.value, {
+      sinEsperar(CertificadoController.solicitarEliminacion(motivo?.value, {
         onLoading: (cargando) => { confirmar.disabled = cargando; },
         onSuccess: () => {
           Toast.exito(t().eliminacionOk);
           if (motivo) motivo.value = '';
           this._mostrarBotonEliminacion();
-          this._cargar();
+          sinEsperar(this._cargar(), 'CertificadosView._cargar');
         },
         onError: (msg) => Toast.error(msg),
-      });
+      }), 'CertificadosView.solicitarEliminacion');
     });
   },
 
@@ -291,7 +292,7 @@ const CertificadosView = {
     document.getElementById('btn-cert-cancelar-correccion')?.addEventListener('click', () => this._salirCorreccion());
     form?.addEventListener('submit', (event) => {
       event.preventDefault();
-      this._enviar(form);
+      sinEsperar(this._enviar(form), 'CertificadosView._enviar');
     });
     this._actualizarMinoria();
   },
@@ -379,7 +380,7 @@ const CertificadosView = {
       onSuccess: () => {
         Toast.exito(this._corrigiendo ? t().corregidoOk : t().cargadoOk);
         this._salirCorreccion();
-        this._cargar();
+        sinEsperar(this._cargar(), 'CertificadosView._cargar');
       },
       onError: (msg) => Toast.error(msg),
     };

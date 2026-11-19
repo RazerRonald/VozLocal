@@ -474,7 +474,7 @@ const ArchivoController = {
       ...perfil,
       universidad:       (formData.universidad || '').trim(),
       carrera:           (formData.carrera || '').trim(),
-      semestre_actual:   /^\d+$/.test(semestreRaw) ? Number(semestreRaw) : NaN,
+      semestre_actual:   /^\d+$/.test(semestreRaw) ? Number(semestreRaw) : Number.NaN,
       horas_a_realizar:  Number(formData.horas_a_realizar),
       lugar_realizacion: (formData.lugar_realizacion || '').trim(),
     };

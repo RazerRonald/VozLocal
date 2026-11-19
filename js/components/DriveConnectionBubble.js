@@ -11,6 +11,7 @@ import DriveAuthModel from '../models/DriveAuthModel.js';
 import Toast from './Toast.js';
 import { ROLES } from '../config/collections.js';
 import { i18n } from '../config/i18n.js';
+import { sinEsperar } from '../utils/promesas.js';
 
 const CHECK_INTERVAL_MS = 30 * 1000;
 
@@ -33,7 +34,7 @@ const DriveConnectionBubble = {
     this._asegurarDOM();
     this._bindEvents();
     this._suscribirDrive();
-    this._prepararDriveSiAplica();
+    sinEsperar(this._prepararDriveSiAplica(), 'DriveConnectionBubble._prepararDriveSiAplica');
     this._actualizar();
   },
 

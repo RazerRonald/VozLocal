@@ -325,7 +325,7 @@ const ArchivoModel = {
 
   _normalizarCorreo(email) {
     const correo = String(email || '').trim();
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) ? correo : '';
+    return /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/.test(correo) ? correo : '';
   },
 
   /**
