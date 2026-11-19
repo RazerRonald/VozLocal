@@ -1,0 +1,8 @@
+# coverage.py: cobertura de las pruebas unittest (tests/unittest).
+# Criterio de aceptación del equipo: mínimo 90 %. `coverage report -m` falla si baja.
+[run]
+source = tests/unittest
+
+[report]
+fail_under = 90
+show_missing = True
